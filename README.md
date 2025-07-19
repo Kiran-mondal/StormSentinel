@@ -14,7 +14,7 @@ A cross-platform lightning hazard detection & alerting tool (Python). Works on W
 ## Run Instructions
 
 ```bash
-git clone https://github.com/yourname/LightningAlert.git
+git clone https://github.com/Kiran-mondal/LightningAlert.git
 cd LightningAlert
 pip install -r requirements.txt
 python3 lightning_alert.py
