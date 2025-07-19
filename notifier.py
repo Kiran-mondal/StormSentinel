@@ -3,6 +3,7 @@ import platform
 
 def send_alert(message):
     system = platform.system()
+
     if system == "Windows":
         try:
             from win10toast import ToastNotifier
@@ -11,7 +12,15 @@ def send_alert(message):
         except:
             print("[!] win10toast not installed.")
             print("⚠️ " + message)
+
     elif system == "Linux":
-        os.system(f'notify-send "⚡ Lightning Alert" "{message}"')
+        # Try notify-send (for GUI Linux), fallback to Termux
+        if os.system("which notify-send > /dev/null 2>&1") == 0:
+            os.system(f'notify-send "⚡ Lightning Alert" "{message}"')
+        else:
+            # Fallback: print message for Termux
+            print("🔔 ALERT: " + message)
+
     else:
-        print("⚠️ " + message)  # Fallback for Termux etc.
+        # For Termux or unknown systems
+        print("⚠️ " + message)
