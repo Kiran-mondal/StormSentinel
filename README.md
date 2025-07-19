@@ -17,8 +17,7 @@ A cross-platform lightning hazard detection & alerting tool (Python). Works on W
  git clone https://github.com/Kiran-mondal/StormSentinel.git
 cd StormSentinel
 pip install -r requirements.txt
-python3 lightning_alert.py
- python3 web_gui.py
+python3 web_gui.py
 ```
 
 ## Customize
