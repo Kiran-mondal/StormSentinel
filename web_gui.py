@@ -1,41 +1,16 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template, jsonify
 import threading
 import time
-
 from sensor_simulator import get_frequency
 from location import get_location
 from risk_zone import get_risk_level
 from utils import log_event
 
 app = Flask(__name__)
-latest_data = {"freq": 0, "location": "N/A", "risk": "N/A"}
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-  <title>⚡ StormSentinel Web</title>
-  <meta http-equiv="refresh" content="1">
-  <style>
-    body { font-family: Arial; padding: 20px; background: #111; color: #0f0; }
-    .risk { font-weight: bold; font-size: 24px; }
-  </style>
-</head>
-<body>
-  <h2>⚡ StormSentinel Web Monitor</h2>
-  <p><b>Frequency:</b> {{ freq }} Hz</p>
-  <p><b>Location:</b> {{ location }}</p>
-  <p class="risk">Risk Level: {{ risk }}</p>
-</body>
-</html>
-"""
-
-@app.route("/")
-def home():
-    return render_template_string(HTML_TEMPLATE, **latest_data)
+data_log = []  # Store tuples: (timestamp, frequency)
+latest_info = {"location": "Unknown", "risk": "Unknown", "freq": 0}
 
 def monitor():
-    global latest_data
     while True:
         freq = get_frequency()
         location = get_location()
@@ -43,11 +18,33 @@ def monitor():
         risk = get_risk_level(region, freq)
         log_event(freq, location)
 
-        latest_data["freq"] = freq
-        latest_data["location"] = location
-        latest_data["risk"] = risk
+        # Limit to last 30 points
+        if len(data_log) >= 30:
+            data_log.pop(0)
+        timestamp = time.strftime("%H:%M:%S")
+        data_log.append((timestamp, freq))
+
+        latest_info["location"] = location
+        latest_info["risk"] = risk
+        latest_info["freq"] = freq
 
         time.sleep(1)
+
+@app.route("/")
+def index():
+    return render_template("dashboard.html")
+
+@app.route("/data")
+def get_data():
+    labels = [point[0] for point in data_log]
+    values = [point[1] for point in data_log]
+    return jsonify({
+        "labels": labels,
+        "values": values,
+        "location": latest_info["location"],
+        "risk": latest_info["risk"],
+        "freq": latest_info["freq"]
+    })
 
 if __name__ == "__main__":
     threading.Thread(target=monitor, daemon=True).start()
