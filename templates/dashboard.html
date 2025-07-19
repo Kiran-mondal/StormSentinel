@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>⚡ StormSentinel - Realtime Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #111; color: #0f0; font-family: Arial; text-align: center; padding: 20px; }
+    canvas { background: #fff; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h2>⚡ StormSentinel Dashboard</h2>
+  <p>📍 Location: <span id="location">--</span></p>
+  <p>⚠️ Risk Level: <span id="risk">--</span></p>
+  <p>🔁 Updating every second</p>
+
+  <canvas id="freqChart" width="400" height="200"></canvas>
+
+  <script>
+    const ctx = document.getElementById('freqChart').getContext('2d');
+    const freqChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Frequency (Hz)',
+          data: [],
+          backgroundColor: 'rgba(0, 255, 0, 0.2)',
+          borderColor: '#0f0',
+          borderWidth: 2,
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 150 },
+          x: { ticks: { autoSkip: true, maxTicksLimit: 10 } }
+        }
+      }
+    });
+
+    async function updateData() {
+      const res = await fetch('/data');
+      const data = await res.json();
+
+      freqChart.data.labels = data.labels;
+      freqChart.data.datasets[0].data = data.values;
+      freqChart.update();
+
+      document.getElementById('location').textContent = data.location;
+      document.getElementById('risk').textContent = data.risk;
+    }
+
+    setInterval(updateData, 1000);
+    updateData(); // initial load
+  </script>
+</body>
+</html>
