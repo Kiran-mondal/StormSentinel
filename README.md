@@ -18,6 +18,7 @@ A cross-platform lightning hazard detection & alerting tool (Python). Works on W
 cd StormSentinel
 pip install -r requirements.txt
 python3 lightning_alert.py
+ python3 web_gui.py
 ```
 
 ## Customize
