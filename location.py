@@ -11,7 +11,7 @@ def cache_location(location):
     try:
         with open(CACHE_FILE, "w") as f:
             f.write(location)
-    except:
+    except Exception:
         pass
 
 def load_cached_location():
@@ -34,7 +34,7 @@ def get_location():
             location = f"GPS ({lat},{lon})"
             cache_location(location)
             return location
-        except:
+        except Exception:
             pass
 
     # --- 2. Try IP-based geolocation ---
@@ -48,7 +48,7 @@ def get_location():
             location = f"{city}, {region}"
             cache_location(location)
             return location
-    except:
+    except Exception:
         pass
 
     # --- 3. Manual fallback: Ask for city and region only ---
