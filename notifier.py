@@ -9,7 +9,7 @@ def send_alert(message):
             from win10toast import ToastNotifier
             toaster = ToastNotifier()
             toaster.show_toast("⚡ Lightning Alert", message, duration=10)
-        except:
+        except Exception:
             print("[!] win10toast not installed.")
             print("⚠️ " + message)
 
