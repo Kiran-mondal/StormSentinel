@@ -1,2 +1,4 @@
 win10toast; platform_system == "Windows"
 requests
+Flask
+gunicorn
