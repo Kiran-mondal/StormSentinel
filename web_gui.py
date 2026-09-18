@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify
+import os
 import threading
 import time
 from sensor_simulator import get_frequency
@@ -46,6 +47,7 @@ def get_data():
         "freq": latest_info["freq"]
     })
 
-if __name__ == "__main__":
-    threading.Thread(target=monitor, daemon=True).start()
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    # Cloud hosts assign a specific port via the PORT environment variable
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
