@@ -26,10 +26,14 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             lon = loc_res.get("lon", 78.96)
             location_name = loc_res.get("city", "Unknown")
 
-        # Fetch live weather and storm data
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m"
+        # Fetch weather and ask API to auto-resolve the timezone
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=auto"
         weather_res = requests.get(url, timeout=5).json()
         current = weather_res.get("current", {})
+        
+        # Extract timezone information
+        tz_name = weather_res.get("timezone", "UTC")
+        tz_abbr = weather_res.get("timezone_abbreviation", "UTC")
         
         wmo_code = current.get("weather_code", 0)
         
@@ -48,6 +52,8 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             
         return {
             "location": location_name,
+            "timezone": tz_name,
+            "timezone_abbr": tz_abbr,
             "temperature": current.get("temperature_2m", 0),
             "wind": current.get("wind_speed_10m", 0),
             "status": storm_status,
@@ -57,6 +63,8 @@ def get_real_storm_data(city=None, lat=None, lon=None):
     except Exception as e:
         return {
             "location": "Offline/Error", 
+            "timezone": "UTC",
+            "timezone_abbr": "UTC",
             "temperature": 0, 
             "wind": 0, 
             "status": "API Error", 
