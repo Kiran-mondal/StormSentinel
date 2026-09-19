@@ -33,41 +33,43 @@
 <body class="bg-[#0f131d] font-sans text-[#dfe2f1] antialiased min-h-screen flex flex-col">
 
   <!-- Header Navigation -->
-  <header class="fixed top-0 w-full z-50 bg-[#0a0e18]/90 backdrop-blur-xl border-b border-[#313540]">
-    <div class="h-20 px-6 flex items-center justify-between">
+  <!-- Added flex-wrap and padding adjustments to fix mobile overflowing -->
+  <header class="w-full z-50 bg-[#0a0e18]/90 backdrop-blur-xl border-b border-[#313540] relative">
+    <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-primary text-[28px] animate-pulse">bolt</span>
         <span class="font-bold text-xl tracking-tight uppercase text-white">StormSentinel</span>
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#4edea3]/10 border border-[#4edea3]/30">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-[#4edea3]/10 border border-[#4edea3]/30">
           <span class="w-2 h-2 rounded-full bg-[#4edea3] animate-ping"></span>
           <span class="text-xs font-mono text-[#4edea3] uppercase tracking-wider">RADAR FEED ONLINE</span>
         </div>
       </div>
 
       <!-- Search & Controls -->
-      <div class="flex items-center gap-3">
-        <div class="relative flex items-center">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div class="relative flex flex-1 sm:flex-none items-center">
           <span class="material-symbols-outlined absolute left-3 text-outline text-[16px]">search</span>
-          <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder:text-outline focus:outline-none focus:bg-[#262a35] w-48 sm:w-64 transition-all" placeholder="Search City..." type="text"/>
-          <button onclick="searchCity()" class="ml-2 px-3 py-2 rounded-lg bg-[#262a35] text-white text-xs font-semibold hover:bg-[#313540] transition-colors">Search</button>
+          <!-- Input width adjusted to flex 1 on mobile to prevent squishing -->
+          <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 flex-1 sm:w-64 rounded-lg text-sm text-white placeholder:text-outline focus:outline-none focus:bg-[#262a35] transition-all" placeholder="Search City..." type="text"/>
+          <button onclick="searchCity()" class="ml-2 px-3 py-2 rounded-lg bg-[#262a35] text-white text-xs font-semibold hover:bg-[#313540] transition-colors whitespace-nowrap">Search</button>
         </div>
-        <button onclick="requestGPS()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#171b26] text-secondary text-xs font-semibold hover:bg-[#262a35] transition-colors">
+        <button onclick="requestGPS()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#171b26] text-secondary text-xs font-semibold hover:bg-[#262a35] transition-colors whitespace-nowrap">
           <span class="material-symbols-outlined text-[16px]">my_location</span>
           <span class="hidden sm:inline">GPS</span>
         </button>
-        <button onclick="submitCorrection()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-black transition-all">
+        <button onclick="submitCorrection()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-black transition-all whitespace-nowrap">
           <span class="material-symbols-outlined text-[16px]">edit_note</span>
-          <span class="hidden sm:inline">Correct Data</span>
+          <span class="hidden sm:inline">Correct</span>
         </button>
       </div>
     </div>
   </header>
 
   <!-- Main Tactical HUD Area -->
-  <main class="w-full pt-24 px-6 pb-12 flex-1 flex flex-col gap-6 max-w-7xl mx-auto">
+  <main class="w-full px-6 py-6 flex-1 flex flex-col gap-6 max-w-7xl mx-auto">
     
     <!-- Top Metrics Overview Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
         <span class="text-[10px] font-mono text-outline block uppercase">Location</span>
         <strong id="location" class="text-lg text-white font-semibold truncate block">Loading...</strong>
@@ -92,11 +94,18 @@
         <span class="text-[10px] font-mono text-outline block uppercase">Rain Chance</span>
         <strong id="rain" class="text-lg text-secondary font-bold">--%</strong>
       </div>
+      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
+        <span class="text-[10px] font-mono text-outline block uppercase">Humidity & Pressure</span>
+        <strong id="humidity" class="text-lg text-white font-semibold">--</strong>% | <strong id="pressure" class="text-lg text-white font-semibold">--</strong> hPa
+      </div>
+      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
+        <span class="text-[10px] font-mono text-outline block uppercase">CAPE Instability</span>
+        <strong id="cape" class="text-lg text-error font-bold">--</strong> J/kg
+      </div>
     </div>
 
     <!-- Radar Simulation & Chart Area -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
       <!-- Interactive Tactical Simulation Visual -->
       <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[380px]">
         <div class="flex items-center justify-between z-10">
@@ -104,7 +113,7 @@
             <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
             <h3 class="font-bold text-white tracking-wide uppercase text-sm">Live Doppler Mesh & Strike Feed</h3>
           </div>
-          <span class="text-xs font-mono text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">KLNX NEXRAD 0.5°</span>
+          <span class="text-xs font-mono text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 hidden sm:inline">KLNX NEXRAD 0.5°</span>
         </div>
 
         <!-- Simulated Radar Rings Graphic Overlay -->
@@ -120,21 +129,15 @@
           <span class="material-symbols-outlined text-primary text-6xl animate-bounce mb-2">radar</span>
           <p class="text-sm text-outline font-mono">Scanning regional atmospheric cells for lightning discharge signatures...</p>
         </div>
-
-        <div class="z-10 flex items-center justify-between text-xs font-mono text-outline border-t border-[#313540] pt-4">
-          <span>Uplink Lat/Lon: Active Sensor Lock</span>
-          <span class="text-secondary">Status: Nominal</span>
-        </div>
       </div>
 
       <!-- Strike Frequency Chart Card -->
-      <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 flex flex-col">
+      <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 flex flex-col min-h-[300px]">
         <h3 class="font-bold text-white tracking-wide uppercase text-sm mb-4">Storm Intensity Timeline</h3>
-        <div class="flex-1 flex items-center justify-center relative min-h-[280px]">
+        <div class="flex-1 flex items-center justify-center relative w-full h-full">
           <canvas id="freqChart" class="w-full h-full"></canvas>
         </div>
       </div>
-
     </div>
   </main>
 
@@ -246,7 +249,10 @@
         document.getElementById('status').textContent = data.status;
         document.getElementById('temp').textContent = data.temp;
         document.getElementById('wind').textContent = data.wind;
-        document.getElementById('rain').textContent = data.rain_chance + '%';
+        document.getElementById('humidity').textContent = data.humidity;
+        document.getElementById('pressure').textContent = data.pressure;
+        document.getElementById('cape').textContent = data.cape;
+        document.getElementById('rain').textContent = data.rain_chance;
 
         let now = new Date();
         document.getElementById('localTime').textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' });
