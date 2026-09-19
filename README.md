@@ -1,5 +1,5 @@
-div align="center">
-  <img src="logo.svg" alt="StormSentinel Logo" width="250" height="250">
+<div align= "center">
+  <img src="https://github.com/Kiran-mondal/StormSentinel/blob/main/templates/logo.svg" alt="StormSentinel Logo" width="250" height="250">
 </div>
 # ⚡ StormSentinel
 
