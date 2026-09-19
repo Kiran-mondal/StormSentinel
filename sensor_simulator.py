@@ -4,7 +4,6 @@ def get_real_storm_data(city=None, lat=None, lon=None):
     try:
         location_name = "Unknown"
         
-        # 1. If city name is provided manually
         if city:
             geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
             geo_res = requests.get(geo_url, timeout=5).json()
@@ -14,24 +13,20 @@ def get_real_storm_data(city=None, lat=None, lon=None):
                 location_name = geo_res["results"][0]["name"]
             else:
                 return {"error": "City not found"}
-                
-        # 2. If precise GPS coordinates are provided
         elif lat and lon:
             location_name = "Precise GPS Location"
-            
-        # 3. Fallback to IP address location
         else:
             loc_res = requests.get("http://ip-api.com/json/", timeout=5).json()
             lat = loc_res.get("lat", 20.59)
             lon = loc_res.get("lon", 78.96)
             location_name = loc_res.get("city", "Unknown")
 
-        # Fetch weather and ask API to auto-resolve the timezone
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=auto"
+        # Fetch weather data including a 1-hour forecast for precipitation probability
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&hourly=precipitation_probability&forecast_hours=1&timezone=auto"
         weather_res = requests.get(url, timeout=5).json()
         current = weather_res.get("current", {})
+        hourly = weather_res.get("hourly", {})
         
-        # Extract timezone information
         tz_name = weather_res.get("timezone", "UTC")
         tz_abbr = weather_res.get("timezone_abbreviation", "UTC")
         
@@ -50,12 +45,16 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             risk_level = "LOW"
             chart_val = 10   
             
+        # Extract the rain probability for the current hour
+        rain_chance = hourly.get("precipitation_probability", [0])[0] if "precipitation_probability" in hourly else 0
+            
         return {
             "location": location_name,
             "timezone": tz_name,
             "timezone_abbr": tz_abbr,
             "temperature": current.get("temperature_2m", 0),
             "wind": current.get("wind_speed_10m", 0),
+            "rain_chance": rain_chance,
             "status": storm_status,
             "risk": risk_level,
             "chart_val": chart_val
@@ -67,6 +66,7 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             "timezone_abbr": "UTC",
             "temperature": 0, 
             "wind": 0, 
+            "rain_chance": 0,
             "status": "API Error", 
             "risk": "UNKNOWN", 
             "chart_val": 0
