@@ -33,8 +33,7 @@
 <body class="bg-[#0f131d] font-sans text-[#dfe2f1] antialiased min-h-screen flex flex-col">
 
   <!-- Header Navigation -->
-  <!-- Added flex-wrap and padding adjustments to fix mobile overflowing -->
-  <header class="w-full z-50 bg-[#0a0e18]/90 backdrop-blur-xl border-b border-[#313540] relative">
+  <header class="w-full z-40 bg-[#0a0e18]/90 backdrop-blur-xl border-b border-[#313540] relative">
     <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-primary text-[28px] animate-pulse">bolt</span>
@@ -49,7 +48,6 @@
       <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
         <div class="relative flex flex-1 sm:flex-none items-center">
           <span class="material-symbols-outlined absolute left-3 text-outline text-[16px]">search</span>
-          <!-- Input width adjusted to flex 1 on mobile to prevent squishing -->
           <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 flex-1 sm:w-64 rounded-lg text-sm text-white placeholder:text-outline focus:outline-none focus:bg-[#262a35] transition-all" placeholder="Search City..." type="text"/>
           <button onclick="searchCity()" class="ml-2 px-3 py-2 rounded-lg bg-[#262a35] text-white text-xs font-semibold hover:bg-[#313540] transition-colors whitespace-nowrap">Search</button>
         </div>
@@ -57,7 +55,7 @@
           <span class="material-symbols-outlined text-[16px]">my_location</span>
           <span class="hidden sm:inline">GPS</span>
         </button>
-        <button onclick="submitCorrection()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-black transition-all whitespace-nowrap">
+        <button onclick="openCorrectionModal()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-black transition-all whitespace-nowrap">
           <span class="material-symbols-outlined text-[16px]">edit_note</span>
           <span class="hidden sm:inline">Correct</span>
         </button>
@@ -66,7 +64,7 @@
   </header>
 
   <!-- Main Tactical HUD Area -->
-  <main class="w-full px-6 py-6 flex-1 flex flex-col gap-6 max-w-7xl mx-auto">
+  <main class="w-full px-6 py-6 flex-1 flex flex-col gap-6 max-w-7xl mx-auto z-10">
     
     <!-- Top Metrics Overview Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -106,7 +104,6 @@
 
     <!-- Radar Simulation & Chart Area -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Interactive Tactical Simulation Visual -->
       <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[380px]">
         <div class="flex items-center justify-between z-10">
           <div class="flex items-center gap-2">
@@ -115,8 +112,6 @@
           </div>
           <span class="text-xs font-mono text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 hidden sm:inline">KLNX NEXRAD 0.5°</span>
         </div>
-
-        <!-- Simulated Radar Rings Graphic Overlay -->
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
           <div class="w-72 h-72 rounded-full border border-primary absolute"></div>
           <div class="w-48 h-48 rounded-full border border-primary absolute"></div>
@@ -124,14 +119,12 @@
           <div class="w-full h-[1px] bg-primary absolute"></div>
           <div class="h-full w-[1px] bg-primary absolute"></div>
         </div>
-
         <div class="z-10 my-auto text-center py-12">
           <span class="material-symbols-outlined text-primary text-6xl animate-bounce mb-2">radar</span>
           <p class="text-sm text-outline font-mono">Scanning regional atmospheric cells for lightning discharge signatures...</p>
         </div>
       </div>
 
-      <!-- Strike Frequency Chart Card -->
       <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 flex flex-col min-h-[300px]">
         <h3 class="font-bold text-white tracking-wide uppercase text-sm mb-4">Storm Intensity Timeline</h3>
         <div class="flex-1 flex items-center justify-center relative w-full h-full">
@@ -141,13 +134,131 @@
     </div>
   </main>
 
-  <!-- Script logic bridging Flask API to UI Elements -->
+  <!-- Custom Alert Notification Modal -->
+  <div id="customAlertModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-[#0a0e18]/80 backdrop-blur-sm transition-opacity">
+    <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-4">
+        <span id="alertIcon" class="material-symbols-outlined text-3xl">info</span>
+        <h3 id="alertTitle" class="text-white font-bold text-lg uppercase tracking-wider">Alert</h3>
+      </div>
+      <p id="alertMessage" class="text-outline text-sm mb-6">System message goes here.</p>
+      <div class="flex justify-end">
+        <button onclick="closeAlert()" class="px-5 py-2 bg-primary/20 text-primary hover:bg-primary hover:text-black rounded-lg text-xs font-bold uppercase transition-colors">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Data Correction Prompt Modal -->
+  <div id="correctionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-[#0a0e18]/80 backdrop-blur-sm transition-opacity">
+    <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="material-symbols-outlined text-primary text-3xl">tune</span>
+        <div>
+          <h3 class="text-white font-bold text-lg uppercase tracking-wider">Manual Override</h3>
+          <p class="text-xs text-outline font-mono">Adjust local telemetry data.</p>
+        </div>
+      </div>
+      
+      <div class="space-y-4 mb-6">
+        <div>
+          <label class="block text-[10px] font-mono text-outline uppercase mb-1">Actual Weather Status</label>
+          <input id="corrStatus" type="text" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="e.g. Heavy Rain, Clear">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] font-mono text-outline uppercase mb-1">Actual Temp (°C)</label>
+            <input id="corrTemp" type="number" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="24">
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono text-outline uppercase mb-1">Rain Chance (%)</label>
+            <input id="corrRain" type="number" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="90">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button onclick="closeCorrectionModal()" class="px-5 py-2 bg-[#262a35] text-white hover:bg-[#313540] rounded-lg text-xs font-bold uppercase transition-colors">Cancel</button>
+        <button onclick="executeCorrection()" class="px-5 py-2 bg-primary text-[#0a0e18] hover:bg-primary/80 rounded-lg text-xs font-bold uppercase transition-colors">Transmit</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     let currentCity = null;
     let currentLat = null;
     let currentLon = null;
 
+    // Custom Modal Logic
+    function showAlert(title, message, type = 'info') {
+      const modal = document.getElementById('customAlertModal');
+      const titleEl = document.getElementById('alertTitle');
+      const msgEl = document.getElementById('alertMessage');
+      const iconEl = document.getElementById('alertIcon');
+
+      titleEl.textContent = title;
+      msgEl.textContent = message;
+
+      if (type === 'error') {
+        iconEl.textContent = 'warning';
+        iconEl.className = 'material-symbols-outlined text-error text-3xl animate-pulse';
+      } else if (type === 'success') {
+        iconEl.textContent = 'check_circle';
+        iconEl.className = 'material-symbols-outlined text-secondary text-3xl';
+      } else {
+        iconEl.textContent = 'info';
+        iconEl.className = 'material-symbols-outlined text-primary text-3xl';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAlert() {
+      document.getElementById('customAlertModal').classList.add('hidden');
+    }
+
+    function openCorrectionModal() {
+      let loc = document.getElementById('location').textContent;
+      if (!loc || loc === "--" || loc === "Loading..." || loc === "City Not Found") {
+        showAlert("Uplink Error", "Please establish a valid location lock before applying manual overrides.", "error");
+        return;
+      }
+      document.getElementById('corrStatus').value = '';
+      document.getElementById('corrTemp').value = '';
+      document.getElementById('corrRain').value = '';
+      document.getElementById('correctionModal').classList.remove('hidden');
+    }
+
+    function closeCorrectionModal() {
+      document.getElementById('correctionModal').classList.add('hidden');
+    }
+
+    async function executeCorrection() {
+      let loc = document.getElementById('location').textContent;
+      let newStatus = document.getElementById('corrStatus').value;
+      let newTemp = document.getElementById('corrTemp').value;
+      let newRain = document.getElementById('corrRain').value;
+
+      if (newStatus || newTemp || newRain) {
+        try {
+          await fetch('/override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
+          });
+          closeCorrectionModal();
+          showAlert("Grid Updated", "Manual telemetry override transmitted successfully.", "success");
+          updateData();
+        } catch (e) {
+          closeCorrectionModal();
+          showAlert("Transmission Failed", "Could not reach the telemetry server.", "error");
+        }
+      } else {
+        showAlert("Missing Parameters", "You must provide at least one modified data point.", "error");
+      }
+    }
+
+    // Chart & Map Logic
     const ctx = document.getElementById('freqChart').getContext('2d');
     const freqChart = new Chart(ctx, {
       type: 'line',
@@ -190,31 +301,10 @@
           document.getElementById('cityInput').value = "";
           updateData();
         }, () => {
-          alert("GPS permission denied or unavailable.");
+          showAlert("Sensor Disabled", "GPS permission denied or unavailable on this device.", "error");
         });
       } else {
-        alert("Geolocation not supported.");
-      }
-    }
-
-    async function submitCorrection() {
-      let loc = document.getElementById('location').textContent;
-      if (!loc || loc === "--" || loc === "Loading...") {
-        alert("Please load a valid location first.");
-        return;
-      }
-      let newStatus = prompt("Actual weather status (e.g. Clear, Heavy Rain, Thunderstorm):");
-      let newTemp = prompt("Actual temperature (°C):");
-      let newRain = prompt("Actual rain chance (%):");
-
-      if (newStatus || newTemp || newRain) {
-        await fetch('/override', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
-        });
-        alert("Data updated successfully!");
-        updateData();
+        showAlert("Sensor Failure", "Geolocation is not supported by your current browser.", "error");
       }
     }
 
