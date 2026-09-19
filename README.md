@@ -1,3 +1,6 @@
+div align="center">
+  <img src="logo.svg" alt="StormSentinel Logo" width="250" height="250">
+</div>
 # ⚡ StormSentinel
 
 > Your watchtower against lightning threats.
