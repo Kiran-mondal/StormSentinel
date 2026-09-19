@@ -5,7 +5,7 @@ from sensor_simulator import get_real_storm_data
 
 app = Flask(__name__)
 data_log = [] 
-user_corrections = {}  # Store manual data overrides by location name
+user_corrections = {} 
 
 @app.route("/")
 def index():
@@ -13,7 +13,6 @@ def index():
 
 @app.route("/override", methods=["POST"])
 def override_data():
-    """Accepts manual corrections from the user and saves them."""
     data = request.json
     location = data.get("location")
     if location:
@@ -37,7 +36,6 @@ def get_data():
     if "error" in live_data:
         return jsonify({"error": live_data["error"]})
         
-    # Apply user overrides if they exist for this location
     loc = live_data["location"]
     if loc in user_corrections:
         override = user_corrections[loc]
@@ -63,6 +61,9 @@ def get_data():
         "status": live_data["status"],
         "temp": live_data["temperature"],
         "wind": live_data["wind"],
+        "humidity": live_data["humidity"],
+        "pressure": live_data["pressure"],
+        "cape": live_data["cape"],
         "rain_chance": live_data["rain_chance"]
     })
 
