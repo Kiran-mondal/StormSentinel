@@ -21,8 +21,8 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             lon = loc_res.get("lon", 78.96)
             location_name = loc_res.get("city", "Unknown")
 
-        # Fetch weather data including a 1-hour forecast for precipitation probability
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&hourly=precipitation_probability&forecast_hours=1&timezone=auto"
+        # Added relative_humidity_2m, surface_pressure, and cape
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation,surface_pressure,weather_code,wind_speed_10m&hourly=precipitation_probability,cape&forecast_hours=1&timezone=auto"
         weather_res = requests.get(url, timeout=5).json()
         current = weather_res.get("current", {})
         hourly = weather_res.get("hourly", {})
@@ -45,8 +45,8 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             risk_level = "LOW"
             chart_val = 10   
             
-        # Extract the rain probability for the current hour
         rain_chance = hourly.get("precipitation_probability", [0])[0] if "precipitation_probability" in hourly else 0
+        cape_val = hourly.get("cape", [0])[0] if "cape" in hourly else 0
             
         return {
             "location": location_name,
@@ -54,6 +54,9 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             "timezone_abbr": tz_abbr,
             "temperature": current.get("temperature_2m", 0),
             "wind": current.get("wind_speed_10m", 0),
+            "humidity": current.get("relative_humidity_2m", 0),
+            "pressure": current.get("surface_pressure", 0),
+            "cape": cape_val,
             "rain_chance": rain_chance,
             "status": storm_status,
             "risk": risk_level,
@@ -66,6 +69,9 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             "timezone_abbr": "UTC",
             "temperature": 0, 
             "wind": 0, 
+            "humidity": 0,
+            "pressure": 0,
+            "cape": 0,
             "rain_chance": 0,
             "status": "API Error", 
             "risk": "UNKNOWN", 
