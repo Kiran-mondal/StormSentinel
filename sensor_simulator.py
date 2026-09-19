@@ -1,36 +1,53 @@
 import requests
 
-def get_real_storm_data():
+def get_real_storm_data(city=None, lat=None, lon=None):
     try:
-        # 1. Fetch geographic coordinates based on IP
-        loc_res = requests.get("http://ip-api.com/json/", timeout=5).json()
-        lat = loc_res.get("lat", 20.59)
-        lon = loc_res.get("lon", 78.96)
-        city = loc_res.get("city", "Unknown")
+        location_name = "Unknown"
         
-        # 2. Fetch live weather and storm data from Open-Meteo
+        # 1. If city name is provided manually
+        if city:
+            geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
+            geo_res = requests.get(geo_url, timeout=5).json()
+            if "results" in geo_res and len(geo_res["results"]) > 0:
+                lat = geo_res["results"][0]["latitude"]
+                lon = geo_res["results"][0]["longitude"]
+                location_name = geo_res["results"][0]["name"]
+            else:
+                return {"error": "City not found"}
+                
+        # 2. If precise GPS coordinates are provided
+        elif lat and lon:
+            location_name = "Precise GPS Location"
+            
+        # 3. Fallback to IP address location
+        else:
+            loc_res = requests.get("http://ip-api.com/json/", timeout=5).json()
+            lat = loc_res.get("lat", 20.59)
+            lon = loc_res.get("lon", 78.96)
+            location_name = loc_res.get("city", "Unknown")
+
+        # Fetch live weather and storm data
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m"
         weather_res = requests.get(url, timeout=5).json()
         current = weather_res.get("current", {})
         
-        # 3. Map WMO weather codes to storm risk levels
         wmo_code = current.get("weather_code", 0)
         
         if wmo_code in [95, 96, 99]:
             storm_status = "THUNDERSTORM DETECTED ⚡"
             risk_level = "CRITICAL"
-            chart_val = 100  # High chart spike for lightning
+            chart_val = 100 
         elif wmo_code >= 50:
             storm_status = "Rain / Heavy Precipitation 🌧️"
             risk_level = "ELEVATED"
-            chart_val = 50   # Medium chart activity
+            chart_val = 50   
         else:
             storm_status = "Clear / No Storm Activity ☀️"
             risk_level = "LOW"
-            chart_val = 10   # Low baseline chart activity
+            chart_val = 10   
             
         return {
-            "location": city,
+            "location": location_name,
             "temperature": current.get("temperature_2m", 0),
             "wind": current.get("wind_speed_10m", 0),
             "status": storm_status,
@@ -38,9 +55,8 @@ def get_real_storm_data():
             "chart_val": chart_val
         }
     except Exception as e:
-        # Fallback if APIs fail or timeout
         return {
-            "location": "Offline", 
+            "location": "Offline/Error", 
             "temperature": 0, 
             "wind": 0, 
             "status": "API Error", 
