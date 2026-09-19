@@ -26,6 +26,7 @@
 
   <div class="metrics">
       <div class="card">📍 Location<br><strong id="location">--</strong></div>
+      <div class="card">🕒 Local Time<br><strong id="localTime">--</strong> <span id="tzAbbr"></span></div>
       <div class="card">⚠️ Risk Level<br><strong id="risk">--</strong></div>
       <div class="card">🌩️ Storm Status<br><strong id="status">--</strong></div>
       <div class="card">🌡️ Temp | 💨 Wind<br><strong id="temp">--</strong>°C | <strong id="wind">--</strong> km/h</div>
@@ -76,7 +77,7 @@
                 document.getElementById('cityInput').value = ""; 
                 updateData();
             }, (error) => {
-                alert("GPS permission denied or unavailable. Continuing with default location.");
+                alert("GPS permission denied or unavailable.");
             });
         } else {
             alert("Geolocation is not supported by your browser.");
@@ -105,15 +106,27 @@
               return;
           }
 
-          freqChart.data.labels = data.labels;
+          // Convert Unix timestamps to the destination city's local time string for the chart
+          freqChart.data.labels = data.labels.map(ts => {
+              let date = new Date(ts * 1000);
+              return date.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+          });
+          
           freqChart.data.datasets[0].data = data.values;
           freqChart.update();
 
+          // Update general UI cards
           document.getElementById('location').textContent = data.location;
           document.getElementById('risk').textContent = data.risk;
           document.getElementById('status').textContent = data.status;
           document.getElementById('temp').textContent = data.temp;
           document.getElementById('wind').textContent = data.wind;
+          
+          // Set current local time for the city
+          let now = new Date();
+          document.getElementById('localTime').textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' });
+          document.getElementById('tzAbbr').textContent = "(" + data.timezone_abbr + ")";
+          
       } catch (error) {
           console.error("Error fetching live data:", error);
       }
