@@ -1,13 +1,10 @@
 from flask import Flask, render_template, jsonify
 import os
 import time
-from sensor_simulator import get_frequency
-from location import get_location
-from risk_zone import get_risk_level
-from utils import log_event
+from sensor_simulator import get_real_storm_data
 
 app = Flask(__name__)
-data_log = []  # Store tuples: (timestamp, frequency)
+data_log = [] 
 
 @app.route("/")
 def index():
@@ -17,32 +14,25 @@ def index():
 def get_data():
     global data_log
     
-    # 1. Fetch real-time data dynamically on each API request
-    freq = get_frequency()
-    location = get_location()
-    region = location.split(",")[1].strip() if "," in location else "Unknown"
-    risk = get_risk_level(region, freq)
+    # Fetch live real-world API data
+    live_data = get_real_storm_data()
     
-    # 2. Log the event
-    log_event(freq, location)
-
-    # 3. Update the rolling chart history (max 30 points)
     timestamp = time.strftime("%H:%M:%S")
-    data_log.append((timestamp, freq))
+    data_log.append((timestamp, live_data["chart_val"]))
     if len(data_log) > 30:
         data_log.pop(0)
 
-    # 4. Separate data for Chart.js
     labels = [point[0] for point in data_log]
     values = [point[1] for point in data_log]
     
-    # 5. Return JSON payload to the dashboard
     return jsonify({
         "labels": labels,
         "values": values,
-        "location": location,
-        "risk": risk,
-        "freq": freq
+        "location": live_data["location"],
+        "risk": live_data["risk"],
+        "status": live_data["status"],
+        "temp": live_data["temperature"],
+        "wind": live_data["wind"]
     })
 
 if __name__ == '__main__':
