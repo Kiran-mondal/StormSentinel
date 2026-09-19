@@ -1,9 +1,10 @@
 <div align= "center">
   <img src="https://github.com/Kiran-mondal/StormSentinel/blob/main/templates/logo.svg" alt="StormSentinel Logo" width="250" height="250">
 </div>
+
 # ⚡ StormSentinel
 
-> Your watchtower against lightning threats.
+Your watchtower against lightning threats.
 
 A cross-platform lightning hazard detection & alerting system that monitors weather threats in real-time. Built with Python and Flask, StormSentinel provides intelligent lightning detection, risk assessment, and multi-channel alerts to keep you safe during severe weather events.
 
