@@ -9,11 +9,21 @@
     canvas { background: #fff; border-radius: 8px; margin-top: 20px; }
     .metrics { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
     .card { background: #222; padding: 15px; border-radius: 8px; border: 1px solid #0f0; min-width: 150px; }
+    .controls { margin-bottom: 20px; }
+    input, button { padding: 10px; border-radius: 5px; border: none; margin: 5px; }
+    button { background: #0f0; color: #111; cursor: pointer; font-weight: bold; }
+    button:hover { background: #0c0; }
   </style>
 </head>
 <body>
   <h2>⚡ StormSentinel Dashboard</h2>
   
+  <div class="controls">
+      <input type="text" id="cityInput" placeholder="Enter city name...">
+      <button onclick="setManualCity()">Search City</button>
+      <button onclick="requestGPS()">📍 Use My GPS (Optional)</button>
+  </div>
+
   <div class="metrics">
       <div class="card">📍 Location<br><strong id="location">--</strong></div>
       <div class="card">⚠️ Risk Level<br><strong id="risk">--</strong></div>
@@ -21,11 +31,13 @@
       <div class="card">🌡️ Temp | 💨 Wind<br><strong id="temp">--</strong>°C | <strong id="wind">--</strong> km/h</div>
   </div>
 
-  <p>🔁 Polling live meteorological APIs...</p>
-
   <canvas id="freqChart" width="400" height="200"></canvas>
 
   <script>
+    let currentCity = null;
+    let currentLat = null;
+    let currentLon = null;
+
     const ctx = document.getElementById('freqChart').getContext('2d');
     const freqChart = new Chart(ctx, {
       type: 'line',
@@ -48,10 +60,50 @@
       }
     });
 
+    function setManualCity() {
+        currentCity = document.getElementById('cityInput').value;
+        currentLat = null;
+        currentLon = null;
+        updateData();
+    }
+
+    function requestGPS() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                currentLat = position.coords.latitude;
+                currentLon = position.coords.longitude;
+                currentCity = null;
+                document.getElementById('cityInput').value = ""; 
+                updateData();
+            }, (error) => {
+                alert("GPS permission denied or unavailable. Continuing with default location.");
+            });
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+
     async function updateData() {
       try {
-          const res = await fetch('/data');
+          let url = '/data';
+          let params = new URLSearchParams();
+          
+          if (currentCity) params.append('city', currentCity);
+          if (currentLat && currentLon) {
+              params.append('lat', currentLat);
+              params.append('lon', currentLon);
+          }
+          if (params.toString()) {
+              url += '?' + params.toString();
+          }
+
+          const res = await fetch(url);
           const data = await res.json();
+
+          if (data.error) {
+              document.getElementById('location').textContent = "City Not Found";
+              return;
+          }
 
           freqChart.data.labels = data.labels;
           freqChart.data.datasets[0].data = data.values;
@@ -67,7 +119,6 @@
       }
     }
 
-    // Set to 5000ms (5 seconds) to avoid hitting free API rate limits
     setInterval(updateData, 5000);
     updateData(); 
   </script>
