@@ -1,6 +1,5 @@
 from flask import Flask, render_template, jsonify
 import os
-import threading
 import time
 from sensor_simulator import get_frequency
 from location import get_location
@@ -9,27 +8,6 @@ from utils import log_event
 
 app = Flask(__name__)
 data_log = []  # Store tuples: (timestamp, frequency)
-latest_info = {"location": "Unknown", "risk": "Unknown", "freq": 0}
-
-def monitor():
-    while True:
-        freq = get_frequency()
-        location = get_location()
-        region = location.split(",")[1].strip() if "," in location else "Unknown"
-        risk = get_risk_level(region, freq)
-        log_event(freq, location)
-
-        # Limit to last 30 points
-        if len(data_log) >= 30:
-            data_log.pop(0)
-        timestamp = time.strftime("%H:%M:%S")
-        data_log.append((timestamp, freq))
-
-        latest_info["location"] = location
-        latest_info["risk"] = risk
-        latest_info["freq"] = freq
-
-        time.sleep(1)
 
 @app.route("/")
 def index():
@@ -37,17 +15,37 @@ def index():
 
 @app.route("/data")
 def get_data():
+    global data_log
+    
+    # 1. Fetch real-time data dynamically on each API request
+    freq = get_frequency()
+    location = get_location()
+    region = location.split(",")[1].strip() if "," in location else "Unknown"
+    risk = get_risk_level(region, freq)
+    
+    # 2. Log the event
+    log_event(freq, location)
+
+    # 3. Update the rolling chart history (max 30 points)
+    timestamp = time.strftime("%H:%M:%S")
+    data_log.append((timestamp, freq))
+    if len(data_log) > 30:
+        data_log.pop(0)
+
+    # 4. Separate data for Chart.js
     labels = [point[0] for point in data_log]
     values = [point[1] for point in data_log]
+    
+    # 5. Return JSON payload to the dashboard
     return jsonify({
         "labels": labels,
         "values": values,
-        "location": latest_info["location"],
-        "risk": latest_info["risk"],
-        "freq": latest_info["freq"]
+        "location": location,
+        "risk": risk,
+        "freq": freq
     })
 
 if __name__ == '__main__':
-    # Cloud hosts assign a specific port via the PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+    
