@@ -1,19 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>⚡ StormSentinel - Realtime Chart</title>
+  <title>⚡ StormSentinel - Live Storm Data</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { background: #111; color: #0f0; font-family: Arial; text-align: center; padding: 20px; }
-    canvas { background: #fff; border-radius: 8px; }
+    canvas { background: #fff; border-radius: 8px; margin-top: 20px; }
+    .metrics { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+    .card { background: #222; padding: 15px; border-radius: 8px; border: 1px solid #0f0; min-width: 150px; }
   </style>
 </head>
 <body>
   <h2>⚡ StormSentinel Dashboard</h2>
-  <p>📍 Location: <span id="location">--</span></p>
-  <p>⚠️ Risk Level: <span id="risk">--</span></p>
-  <p>🔁 Updating every second</p>
+  
+  <div class="metrics">
+      <div class="card">📍 Location<br><strong id="location">--</strong></div>
+      <div class="card">⚠️ Risk Level<br><strong id="risk">--</strong></div>
+      <div class="card">🌩️ Storm Status<br><strong id="status">--</strong></div>
+      <div class="card">🌡️ Temp | 💨 Wind<br><strong id="temp">--</strong>°C | <strong id="wind">--</strong> km/h</div>
+  </div>
+
+  <p>🔁 Polling live meteorological APIs...</p>
 
   <canvas id="freqChart" width="400" height="200"></canvas>
 
@@ -24,7 +32,7 @@
       data: {
         labels: [],
         datasets: [{
-          label: 'Frequency (Hz)',
+          label: 'Storm Intensity Metric',
           data: [],
           backgroundColor: 'rgba(0, 255, 0, 0.2)',
           borderColor: '#0f0',
@@ -41,19 +49,27 @@
     });
 
     async function updateData() {
-      const res = await fetch('/data');
-      const data = await res.json();
+      try {
+          const res = await fetch('/data');
+          const data = await res.json();
 
-      freqChart.data.labels = data.labels;
-      freqChart.data.datasets[0].data = data.values;
-      freqChart.update();
+          freqChart.data.labels = data.labels;
+          freqChart.data.datasets[0].data = data.values;
+          freqChart.update();
 
-      document.getElementById('location').textContent = data.location;
-      document.getElementById('risk').textContent = data.risk;
+          document.getElementById('location').textContent = data.location;
+          document.getElementById('risk').textContent = data.risk;
+          document.getElementById('status').textContent = data.status;
+          document.getElementById('temp').textContent = data.temp;
+          document.getElementById('wind').textContent = data.wind;
+      } catch (error) {
+          console.error("Error fetching live data:", error);
+      }
     }
 
-    setInterval(updateData, 1000);
-    updateData(); // initial load
+    // Set to 5000ms (5 seconds) to avoid hitting free API rate limits
+    setInterval(updateData, 5000);
+    updateData(); 
   </script>
 </body>
 </html>
