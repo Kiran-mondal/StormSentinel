@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import os
 import time
 from sensor_simulator import get_real_storm_data
@@ -14,8 +14,15 @@ def index():
 def get_data():
     global data_log
     
-    # Fetch live real-world API data
-    live_data = get_real_storm_data()
+    # Read optional location parameters from the web request
+    city = request.args.get('city')
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
+    
+    live_data = get_real_storm_data(city=city, lat=lat, lon=lon)
+    
+    if "error" in live_data:
+        return jsonify({"error": live_data["error"]})
     
     timestamp = time.strftime("%H:%M:%S")
     data_log.append((timestamp, live_data["chart_val"]))
