@@ -14,7 +14,6 @@ def index():
 def get_data():
     global data_log
     
-    # Read optional location parameters from the web request
     city = request.args.get('city')
     lat = request.args.get('lat')
     lon = request.args.get('lon')
@@ -24,7 +23,8 @@ def get_data():
     if "error" in live_data:
         return jsonify({"error": live_data["error"]})
     
-    timestamp = time.strftime("%H:%M:%S")
+    # Store raw Unix timestamps instead of server-formatted time strings
+    timestamp = time.time()
     data_log.append((timestamp, live_data["chart_val"]))
     if len(data_log) > 30:
         data_log.pop(0)
@@ -36,6 +36,8 @@ def get_data():
         "labels": labels,
         "values": values,
         "location": live_data["location"],
+        "timezone": live_data["timezone"],
+        "timezone_abbr": live_data["timezone_abbr"],
         "risk": live_data["risk"],
         "status": live_data["status"],
         "temp": live_data["temperature"],
