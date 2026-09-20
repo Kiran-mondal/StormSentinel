@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StormSentinel — Weather Intelligence</title>
 
-  <!-- Favicon Link -->
   <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -27,7 +26,6 @@
     }
   </script>
 
-  <!-- Stable Three.js & Chart.js CDNs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -73,7 +71,6 @@
   <div class="fixed inset-0 pointer-events-none grid-bg"></div>
 
   <main class="relative max-w-[1600px] mx-auto px-4 md:px-6 py-4 z-10">
-    
     <header class="glass rounded-2xl px-4 py-3 flex flex-col lg:flex-row items-center gap-3 relative mb-6">
       <div class="flex items-center gap-3 min-w-fit">
         <div class="h-10 w-10 rounded-xl bg-neon/10 border border-neon/25 grid place-items-center text-xl shadow-glow">⚡</div>
@@ -95,7 +92,6 @@
     </header>
 
     <section class="grid grid-cols-1 xl:grid-cols-[280px_minmax(500px,1fr)_330px] gap-4">
-      
       <aside class="glass rounded-2xl p-4 order-2 xl:order-1">
         <div class="flex items-center justify-between mb-5">
           <div>
@@ -147,8 +143,8 @@
 
       <section id="globeWrap" class="glass rounded-2xl relative overflow-hidden order-1 xl:order-2">
         <div class="absolute z-10 left-5 top-5 pointer-events-none">
-          <p class="text-[10px] uppercase tracking-[.3em] text-cyan/70">Orbital Weather Scan</p>
-          <p class="text-xs text-slate-500 mt-1">Drag to rotate • Scroll to zoom • Click anomaly</p>
+          <p class="text-[10px] uppercase tracking-[.3em] text-cyan/70">Earth Orbital Scan</p>
+          <p class="text-xs text-slate-500 mt-1">Drag to rotate • Scroll to zoom • Click clouds</p>
         </div>
 
         <div id="globe"></div>
@@ -159,7 +155,7 @@
             <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-neon pulse-dot"></span><span class="text-xs text-neon">ACTIVE</span></div>
           </div>
           <div class="text-right">
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Tracked Anomalies</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Tracked Storm Cells</p>
             <p id="stormCount" class="text-lg font-semibold text-white">0</p>
           </div>
         </div>
@@ -197,7 +193,7 @@
     <div class="glass rounded-2xl w-full max-w-md p-5 border border-cyan/20">
       <div class="flex items-start justify-between">
         <div>
-          <p class="text-[10px] uppercase tracking-[.25em] text-cyan">Anomaly detail</p>
+          <p class="text-[10px] uppercase tracking-[.25em] text-cyan">Weather Anomaly</p>
           <h2 id="modalTitle" class="text-xl font-semibold text-white mt-1">Storm Cell</h2>
         </div>
         <button id="closeModal" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
@@ -245,11 +241,13 @@
   let currentLat = null;
   let currentLon = null;
 
-  // --- Three.js Globe Setup ---
+  // --- Three.js Realistic Globe Setup ---
   const globeEl = document.getElementById(`globe`);
   const scene = new THREE.Scene();
+  
+  // Camera Adjusted for smaller globe
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  camera.position.set(0, 0.15, 3.15);
+  camera.position.set(0, 0, 2.8); 
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -260,27 +258,54 @@
   controls.enableDamping = true;
   controls.enablePan = false;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.8;
-  controls.minDistance = 2.35;
-  controls.maxDistance = 4.2;
+  controls.autoRotateSpeed = 0.6;
+  controls.minDistance = 1.5; 
+  controls.maxDistance = 4.0;
+
+  // Lighting for realistic Earth
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+  scene.add(ambientLight);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  sunLight.position.set(5, 3, 5);
+  scene.add(sunLight);
+
+  // Add subtle stars background
+  const starGeo = new THREE.BufferGeometry();
+  const starPoints = [];
+  for(let i=0; i<300; i++) {
+    starPoints.push((Math.random() - 0.5) * 10);
+    starPoints.push((Math.random() - 0.5) * 10);
+    starPoints.push((Math.random() - 0.5) * 10 - 2);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPoints, 3));
+  const starMat = new THREE.PointsMaterial({color: 0x888888, size: 0.01});
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
 
   const globeGroup = new THREE.Group();
   scene.add(globeGroup);
 
-  const globe = new THREE.Mesh(
-    new THREE.SphereGeometry(1.25, 64, 64),
-    new THREE.MeshBasicMaterial({ color: 0x101c2b, wireframe: true, transparent: true, opacity: 0.62 })
-  );
-  globeGroup.add(globe);
+  // Texture Loader for Earth
+  const textureLoader = new THREE.TextureLoader();
+  const earthMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg`);
+  const bumpMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-topology.png`);
 
-  const surface = new THREE.Mesh(
-    new THREE.SphereGeometry(1.22, 64, 64),
-    new THREE.MeshBasicMaterial({ color: 0x07111c, transparent: true, opacity: 0.8 })
-  );
-  globeGroup.add(surface);
+  // Realistic Earth Mesh (Smaller Size: radius 1.0)
+  const earthRadius = 1.0;
+  const earthGeometry = new THREE.SphereGeometry(earthRadius, 64, 64);
+  const earthMaterial = new THREE.MeshStandardMaterial({
+    map: earthMap,
+    bumpMap: bumpMap,
+    bumpScale: 0.015,
+    roughness: 0.6,
+    metalness: 0.1
+  });
+  const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+  globeGroup.add(earth);
 
+  // Transparent Radar Sweep adapted for smaller Earth
   const sweep = new THREE.Mesh(
-    new THREE.ConeGeometry(1.45, 0.06, 64, 1, true, 0, Math.PI / 2),
+    new THREE.ConeGeometry(1.15, 0.06, 64, 1, true, 0, Math.PI / 2),
     new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
   );
   sweep.rotation.x = Math.PI / 2;
@@ -291,7 +316,7 @@
   const raycastTargets = [];
   const sceneMeshes = [];
 
-  function latLonToVector3(lat, lon, radius=1.26) {
+  function latLonToVector3(lat, lon, radius = 1.0) {
     const phi = (90 - lat) * Math.PI / 180;
     const theta = (lon + 180) * Math.PI / 180;
     return new THREE.Vector3(
@@ -307,40 +332,68 @@
     raycastTargets.length = 0;
   }
 
-  function addStormBlip(lat, lon, risk, name = `Storm Cell`, status = `Active Anomaly`, rain = `--`) {
-    const pos = latLonToVector3(lat, lon);
-    const color = risk === `CRITICAL` ? 0xff4d6d : (risk === `ELEVATED` ? 0xffd84d : 0x4edea3);
+  // --- Procedural 3D Cloud Generator for Storms ---
+  function addStormCloud(lat, lon, risk, name = `Storm Cell`, status = `Active Anomaly`, rain = `--`) {
+    const pos = latLonToVector3(lat, lon, earthRadius + 0.02); // Just above surface
+    const cloudGroup = new THREE.Group();
+    cloudGroup.position.copy(pos);
     
-    const blip = new THREE.Mesh(
-      new THREE.SphereGeometry(0.04, 20, 20),
-      new THREE.MeshBasicMaterial({ color: color })
-    );
-    blip.position.copy(pos);
-    blip.userData = { name, risk, status, rain, lat, lon };
+    // Determine cloud color based on risk
+    // Critical = Dark stormy clouds, Elevated = Grayish rain clouds
+    const cloudColor = risk === `CRITICAL` ? 0x222222 : 0xaaaaaa;
     
-    globeGroup.add(blip);
-    sceneMeshes.push(blip);
-    raycastTargets.push(blip);
+    const cloudMaterial = new THREE.MeshLambertMaterial({ 
+      color: cloudColor, 
+      transparent: true, 
+      opacity: 0.9 
+    });
 
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.09, 20, 20),
-      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.3 })
+    // Create a cluster of puffy spheres to look like a cloud
+    for(let i=0; i<6; i++) {
+      const puf = new THREE.Mesh(new THREE.SphereGeometry(0.015 + Math.random() * 0.02, 12, 12), cloudMaterial);
+      puf.position.set(
+        (Math.random() - 0.5) * 0.06,
+        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.06
+      );
+      cloudGroup.add(puf);
+    }
+
+    // Add Red lightning glow if it's a critical storm
+    if(risk === `CRITICAL`) {
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.03, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff4d6d, transparent: true, opacity: 0.6 })
+      );
+      cloudGroup.add(glow);
+    }
+
+    // Invisible Hitbox for clicking
+    const hitbox = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 16, 16),
+      new THREE.MeshBasicMaterial({ visible: false })
     );
-    glow.position.copy(pos);
-    globeGroup.add(glow);
-    sceneMeshes.push(glow);
+    hitbox.position.copy(pos);
+    hitbox.userData = { name, risk, status, rain, lat, lon };
+    
+    globeGroup.add(cloudGroup);
+    globeGroup.add(hitbox);
+    
+    sceneMeshes.push(cloudGroup, hitbox);
+    raycastTargets.push(hitbox); 
   }
 
   function renderGlobeData(data) {
     clearStorms();
     let count = 0;
     
-    addStormBlip(18.2, 89.0, `CRITICAL`, `Bay of Bengal Cell`, `Severe Thunderstorm`, 92);
-    addStormBlip(14.2, -88.1, `ELEVATED`, `Central America Line`, `Convective Rain`, 75);
+    // Background demo storms (Dark cloud over Bay of Bengal, Gray cloud over America)
+    addStormCloud(18.2, 89.0, `CRITICAL`, `Bay of Bengal Cell`, `Severe Thunderstorm`, 92);
+    addStormCloud(14.2, -88.1, `ELEVATED`, `Central America Line`, `Convective Rain`, 75);
     count += 2;
 
     if (data && data.risk !== `LOW` && data.location !== `Offline/Error`) {
-       addStormBlip(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
+       addStormCloud(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
        count++;
     }
     document.getElementById(`stormCount`).textContent = count;
@@ -424,7 +477,6 @@
         return;
       }
 
-      // Update UI Text
       document.getElementById(`location`).textContent = data.location;
       document.getElementById(`temp`).textContent = data.temp;
       document.getElementById(`wind`).textContent = data.wind;
@@ -439,12 +491,10 @@
       let riskColor = data.risk === `CRITICAL` ? `text-red-400` : (data.risk === `ELEVATED` ? `text-yellow-300` : `text-neon`);
       document.getElementById(`overviewRisk`).className = `font-bold ${riskColor}`;
 
-        // Progress Bars
       document.getElementById(`windBar`).style.width = Math.min(data.wind * 2, 100) + `%`;
       document.getElementById(`humidityBar`).style.width = (data.humidity || 0) + `%`;
       document.getElementById(`capeBar`).style.width = Math.min((data.cape || 0) / 30, 100) + `%`;
       
-      // Update Time (Safely split into multiple lines)
       let now = new Date();
       let timeOpts = { timeZone: data.timezone || `UTC`, hour: `2-digit`, minute: `2-digit` };
       let formattedTime = now.toLocaleTimeString([], timeOpts);
@@ -454,7 +504,6 @@
       document.getElementById(`systemStatus`).textContent = `● Live Data Synced`;
       document.getElementById(`systemStatus`).className = `mt-1 text-sm text-neon`;
 
-      // Chart Update
       if(data.labels && data.values) {
           mainChart.data.labels = data.labels.map(ts => {
               let date = new Date(ts * 1000);
@@ -474,7 +523,6 @@
     }
   }
 
-  // --- Controls ---
   document.getElementById(`searchBtn`).onclick = () => {
     currentCity = document.getElementById(`cityInput`).value.trim();
     currentLat = null;
@@ -500,22 +548,17 @@
     );
   };
 
-  // --- Modal Logic ---
   const modal = document.getElementById(`modal`);
   
   function openStorm(s) {
     document.getElementById(`modalTitle`).textContent = s.name;
     document.getElementById(`modalRisk`).textContent = s.risk;
-    
     let colorClass = s.risk === `CRITICAL` ? `text-red-400` : `text-yellow-300`;
     document.getElementById(`modalRisk`).className = `mt-1 font-bold ${colorClass}`;
     
     document.getElementById(`modalStatus`).textContent = s.status;
     document.getElementById(`modalRain`).textContent = s.rain + `%`;
-    
-    let latString = s.lat.toFixed(2);
-    let lonString = s.lon.toFixed(2);
-    document.getElementById(`modalCoords`).textContent = `${latString}°, ${lonString}°`;
+    document.getElementById(`modalCoords`).textContent = `${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°`;
     
     modal.classList.remove(`hidden`);
     modal.classList.add(`flex`);
@@ -551,19 +594,12 @@
 
     if (newStatus || newTemp || newRain) {
       try {
-        let payload = { 
-          location: loc, 
-          status: newStatus, 
-          temp: newTemp, 
-          rain_chance: newRain 
-        };
-        
+        let payload = { location: loc, status: newStatus, temp: newTemp, rain_chance: newRain };
         await fetch(`/override`, {
           method: `POST`,
           headers: { 'Content-Type': `application/json` },
           body: JSON.stringify(payload)
         });
-        
         editModal.classList.add(`hidden`);
         editModal.classList.remove(`flex`);
         updateData(); 
@@ -573,7 +609,6 @@
     }
   };
 
-  // Init
   renderGlobeData(null); 
   setInterval(updateData, 5000);
   updateData();
