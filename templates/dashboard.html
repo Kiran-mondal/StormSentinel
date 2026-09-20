@@ -303,14 +303,6 @@
   const earth = new THREE.Mesh(earthGeometry, earthMaterial);
   globeGroup.add(earth);
 
-  // Transparent Radar Sweep adapted for smaller Earth
-  const sweep = new THREE.Mesh(
-    new THREE.ConeGeometry(1.15, 0.06, 64, 1, true, 0, Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
-  );
-  sweep.rotation.x = Math.PI / 2;
-  globeGroup.add(sweep);
-
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   const raycastTargets = [];
@@ -408,12 +400,6 @@
   window.addEventListener(`resize`, resize);
   resize();
 
-  function animate() {
-    requestAnimationFrame(animate);
-    sweep.rotation.z += 0.01;
-    controls.update();
-    renderer.render(scene, camera);
-  }
   animate();
 
   renderer.domElement.addEventListener(`click`, (event) => {
