@@ -4,8 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>⚡ StormSentinel - Lightning & Storm Radar</title>
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -50,7 +49,7 @@
       <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
         <div class="relative flex flex-1 sm:flex-none items-center">
           <span class="material-symbols-outlined absolute left-3 text-outline text-[16px]">search</span>
-          <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 flex-1 sm:w-64 rounded-lg text-sm text-white placeholder:text-outline focus:outline-none focus:bg-[#262a35] transition-all" placeholder="Search City..." type="text"/>
+          <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 flex-1 sm:w-64 rounded-lg text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-all" placeholder="Search City..." type="text"/>
           <button onclick="searchCity()" class="ml-2 px-3 py-2 rounded-lg bg-[#262a35] text-white text-xs font-semibold hover:bg-[#313540] transition-colors whitespace-nowrap">Search</button>
         </div>
         <button onclick="requestGPS()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#171b26] text-secondary text-xs font-semibold hover:bg-[#262a35] transition-colors whitespace-nowrap">
@@ -106,27 +105,49 @@
 
     <!-- Radar Simulation & Chart Area -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[380px]">
-        <div class="flex items-center justify-between z-10">
+      
+      <!-- Interactive ATC Tactical Radar -->
+      <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[400px]">
+        <div class="flex items-center justify-between z-20">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
-            <h3 class="font-bold text-white tracking-wide uppercase text-sm">Live Doppler Mesh & Strike Feed</h3>
+            <h3 class="font-bold text-white tracking-wide uppercase text-sm">ATC Tactical Radar</h3>
           </div>
-          <span class="text-xs font-mono text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 hidden sm:inline">KLNX NEXRAD 0.5°</span>
+          <span id="radarTargetName" class="text-xs font-mono text-secondary bg-secondary/10 px-2.5 py-1 rounded-md border border-secondary/20">TARGET: UNKNOWN</span>
         </div>
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-          <div class="w-72 h-72 rounded-full border border-primary absolute"></div>
-          <div class="w-48 h-48 rounded-full border border-primary absolute"></div>
-          <div class="w-24 h-24 rounded-full border border-primary absolute"></div>
-          <div class="w-full h-[1px] bg-primary absolute"></div>
-          <div class="h-full w-[1px] bg-primary absolute"></div>
+
+        <!-- ATC Sweeping Radar Animation -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+          <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center">
+            
+            <!-- Static Grid & Rings -->
+            <div class="absolute w-full h-full rounded-full border border-[#4edea3]/30"></div>
+            <div class="absolute w-2/3 h-2/3 rounded-full border border-[#4edea3]/20"></div>
+            <div class="absolute w-1/3 h-1/3 rounded-full border border-[#4edea3]/10"></div>
+            
+            <!-- Crosshairs -->
+            <div class="absolute w-full h-[1px] bg-[#4edea3]/30"></div>
+            <div class="absolute h-full w-[1px] bg-[#4edea3]/30"></div>
+            
+            <!-- The Sweeping Beam (Green Conic Gradient) -->
+            <div class="absolute w-full h-full rounded-full animate-[spin_3s_linear_infinite]" style="background: conic-gradient(from 0deg, transparent 70%, rgba(78, 222, 163, 0.15) 90%, rgba(78, 222, 163, 0.8) 100%);">
+              <!-- Leading Edge Line -->
+              <div class="absolute top-0 left-[49.5%] w-[2px] h-1/2 bg-[#4edea3] shadow-[0_0_12px_#4edea3]"></div>
+            </div>
+
+            <!-- Simulated Storm Cell Blips -->
+            <div class="absolute top-[20%] left-[30%] w-2 h-2 bg-error rounded-full animate-[ping_3s_infinite]"></div>
+            <div class="absolute bottom-[25%] right-[20%] w-1.5 h-1.5 bg-tertiary rounded-full animate-[ping_3s_infinite]" style="animation-delay: 1.5s;"></div>
+          </div>
         </div>
-        <div class="z-10 my-auto text-center py-12">
-          <span class="material-symbols-outlined text-primary text-6xl animate-bounce mb-2">radar</span>
-          <p class="text-sm text-outline font-mono">Scanning regional atmospheric cells for lightning discharge signatures...</p>
+
+        <div class="z-20 mt-auto flex items-center justify-between text-xs font-mono text-outline border-t border-[#313540] pt-4">
+          <span id="radarStatusText">Scanning sector...</span>
+          <span class="text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">satellite_alt</span> Uplink: Active</span>
         </div>
       </div>
 
+      <!-- Strike Frequency Chart Card -->
       <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 flex flex-col min-h-[300px]">
         <h3 class="font-bold text-white tracking-wide uppercase text-sm mb-4">Storm Intensity Timeline</h3>
         <div class="flex-1 flex items-center justify-center relative w-full h-full">
@@ -160,7 +181,6 @@
           <p class="text-xs text-outline font-mono">Adjust local telemetry data.</p>
         </div>
       </div>
-      
       <div class="space-y-4 mb-6">
         <div>
           <label class="block text-[10px] font-mono text-outline uppercase mb-1">Actual Weather Status</label>
@@ -177,7 +197,6 @@
           </div>
         </div>
       </div>
-
       <div class="flex justify-end gap-3">
         <button onclick="closeCorrectionModal()" class="px-5 py-2 bg-[#262a35] text-white hover:bg-[#313540] rounded-lg text-xs font-bold uppercase transition-colors">Cancel</button>
         <button onclick="executeCorrection()" class="px-5 py-2 bg-primary text-[#0a0e18] hover:bg-primary/80 rounded-lg text-xs font-bold uppercase transition-colors">Transmit</button>
@@ -191,16 +210,11 @@
     let currentLat = null;
     let currentLon = null;
 
-    // Custom Modal Logic
     function showAlert(title, message, type = 'info') {
       const modal = document.getElementById('customAlertModal');
-      const titleEl = document.getElementById('alertTitle');
-      const msgEl = document.getElementById('alertMessage');
+      document.getElementById('alertTitle').textContent = title;
+      document.getElementById('alertMessage').textContent = message;
       const iconEl = document.getElementById('alertIcon');
-
-      titleEl.textContent = title;
-      msgEl.textContent = message;
-
       if (type === 'error') {
         iconEl.textContent = 'warning';
         iconEl.className = 'material-symbols-outlined text-error text-3xl animate-pulse';
@@ -211,13 +225,10 @@
         iconEl.textContent = 'info';
         iconEl.className = 'material-symbols-outlined text-primary text-3xl';
       }
-
       modal.classList.remove('hidden');
     }
 
-    function closeAlert() {
-      document.getElementById('customAlertModal').classList.add('hidden');
-    }
+    function closeAlert() { document.getElementById('customAlertModal').classList.add('hidden'); }
 
     function openCorrectionModal() {
       let loc = document.getElementById('location').textContent;
@@ -231,9 +242,7 @@
       document.getElementById('correctionModal').classList.remove('hidden');
     }
 
-    function closeCorrectionModal() {
-      document.getElementById('correctionModal').classList.add('hidden');
-    }
+    function closeCorrectionModal() { document.getElementById('correctionModal').classList.add('hidden'); }
 
     async function executeCorrection() {
       let loc = document.getElementById('location').textContent;
@@ -260,7 +269,6 @@
       }
     }
 
-    // Chart & Map Logic
     const ctx = document.getElementById('freqChart').getContext('2d');
     const freqChart = new Chart(ctx, {
       type: 'line',
@@ -326,6 +334,8 @@
 
         if (data.error) {
           document.getElementById('location').textContent = "City Not Found";
+          document.getElementById('radarTargetName').textContent = "TARGET: NOT FOUND";
+          document.getElementById('radarStatusText').textContent = "Awaiting valid input...";
           return;
         }
 
@@ -336,6 +346,7 @@
         freqChart.data.datasets[0].data = data.values;
         freqChart.update();
 
+        // Update the top UI metrics
         document.getElementById('location').textContent = data.location;
         document.getElementById('risk').textContent = data.risk;
         document.getElementById('status').textContent = data.status;
@@ -345,6 +356,10 @@
         document.getElementById('pressure').textContent = data.pressure;
         document.getElementById('cape').textContent = data.cape;
         document.getElementById('rain').textContent = data.rain_chance;
+
+        // Sync Radar Text with the current city location and risk status
+        document.getElementById('radarTargetName').textContent = "TARGET: " + data.location.toUpperCase();
+        document.getElementById('radarStatusText').textContent = "Scanning sector over " + data.location + " | Risk: " + data.risk;
 
         let now = new Date();
         document.getElementById('localTime').textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' });
