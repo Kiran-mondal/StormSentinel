@@ -1,425 +1,583 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>⚡ StormSentinel - Lightning & Storm Radar</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StormSentinel — Weather Intelligence</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: "class",
       theme: {
         extend: {
           colors: {
-            surface: "#0f131d",
-            "surface-container": "#1c1f2a",
-            "surface-container-low": "#171b26",
-            "surface-container-highest": "#313540",
-            primary: "#4cd7f6",
-            secondary: "#4edea3",
-            tertiary: "#ffb95f",
-            error: "#ffb4ab",
-            outline: "#869397"
+            storm: "#0f131d",
+            neon: "#4edea3",
+            cyan: "#4cd7f6"
+          },
+          boxShadow: {
+            glow: "0 0 30px rgba(78,222,163,.18)",
+            cyanGlow: "0 0 28px rgba(76,215,246,.18)"
           }
         }
       }
     }
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(76,215,246,.06), transparent 28rem),
+        radial-gradient(circle at 15% 70%, rgba(78,222,163,.05), transparent 25rem),
+        #0f131d;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+    .glass {
+      background: linear-gradient(135deg, rgba(21,28,41,.78), rgba(11,16,27,.64));
+      border: 1px solid rgba(148,163,184,.14);
+      box-shadow: 0 18px 55px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.035);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(76,215,246,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76,215,246,.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, black, transparent 88%);
+    }
+    #globeWrap { min-height: 560px; }
+    #globe { position:absolute; inset:0; width:100%; height:100%; }
+    .metric-value { text-shadow: 0 0 18px rgba(78,222,163,.22); }
+    .scanline {
+      animation: scan 3.8s linear infinite;
+    }
+    @keyframes scan {
+      from { transform: translateX(-110%); }
+      to { transform: translateX(110%); }
+    }
+    .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,.35); }
+      50% { box-shadow: 0 0 0 10px rgba(248,113,113,0); }
+    }
+    .modal-backdrop { background: rgba(2,6,13,.72); backdrop-filter: blur(9px); }
+  </style>
 </head>
-<body class="bg-[#0f131d] font-sans text-[#dfe2f1] antialiased min-h-screen flex flex-col">
 
-  <!-- Header Navigation -->
-  <header class="w-full z-40 bg-[#0a0e18]/90 backdrop-blur-xl border-b border-[#313540] relative">
-    <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-primary text-[28px] animate-pulse">bolt</span>
-        <span class="font-bold text-xl tracking-tight uppercase text-white">StormSentinel</span>
-        <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-[#4edea3]/10 border border-[#4edea3]/30">
-          <span class="w-2 h-2 rounded-full bg-[#4edea3] animate-ping"></span>
-          <span class="text-xs font-mono text-[#4edea3] uppercase tracking-wider">RADAR ONLINE</span>
+<body class="text-slate-200">
+  <div class="fixed inset-0 pointer-events-none grid-bg"></div>
+
+  <main class="relative max-w-[1600px] mx-auto px-4 md:px-6 py-4">
+    <!-- Header -->
+    <header class="glass rounded-2xl px-4 py-3 flex flex-col lg:flex-row items-center gap-3 sticky top-3 z-30">
+      <div class="flex items-center gap-3 min-w-fit">
+        <div class="h-10 w-10 rounded-xl bg-neon/10 border border-neon/25 grid place-items-center text-xl shadow-glow">⚡</div>
+        <div>
+          <h1 class="font-semibold tracking-wide text-white">StormSentinel</h1>
+          <p class="text-[10px] uppercase tracking-[.25em] text-neon/80">Weather Intelligence</p>
         </div>
       </div>
 
-      <!-- Search & Controls -->
-      <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-        <div class="relative flex flex-1 sm:flex-none items-center">
-          <span class="material-symbols-outlined absolute left-3 text-outline text-[16px]">search</span>
-          <input id="cityInput" class="bg-[#171b26] pl-9 pr-4 py-2 flex-1 sm:w-64 rounded-lg text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-all" placeholder="Search City..." type="text"/>
-          <button onclick="searchCity()" class="ml-2 px-3 py-2 rounded-lg bg-[#262a35] text-white text-xs font-semibold hover:bg-[#313540] transition-colors whitespace-nowrap">Search</button>
-        </div>
-        <button onclick="requestGPS()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#171b26] text-secondary text-xs font-semibold hover:bg-[#262a35] transition-colors whitespace-nowrap">
-          <span class="material-symbols-outlined text-[16px]">my_location</span>
-          <span class="hidden sm:inline">GPS</span>
-        </button>
-        <button onclick="openCorrectionModal()" class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-black transition-all whitespace-nowrap">
-          <span class="material-symbols-outlined text-[16px]">edit_note</span>
-          <span class="hidden sm:inline">Correct</span>
-        </button>
+      <div class="flex-1 w-full lg:max-w-2xl relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
+        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city or location..." />
       </div>
-    </div>
-  </header>
 
-  <!-- Main HUD Area -->
-  <main class="w-full px-6 py-6 flex-1 flex flex-col gap-6 max-w-7xl mx-auto z-10">
-    
-    <!-- Top Metrics Grid -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Location</span>
-        <strong id="location" class="text-lg text-white font-semibold truncate block">Loading...</strong>
+      <div class="flex gap-2 w-full lg:w-auto">
+        <button id="searchBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-cyan/10 border border-cyan/25 text-cyan text-sm hover:bg-cyan/15 transition">Search</button>
+        <button id="gpsBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-neon/10 border border-neon/25 text-neon text-sm hover:bg-neon/15 transition">📍 GPS</button>
       </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Local Time</span>
-        <strong id="localTime" class="text-lg text-primary font-mono font-semibold">--:--</strong> <span id="tzAbbr" class="text-xs text-outline"></span>
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Risk Level</span>
-        <strong id="risk" class="text-lg text-tertiary font-bold">--</strong>
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Storm Status</span>
-        <strong id="status" class="text-sm text-white font-semibold truncate block">--</strong>
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Temp / Wind</span>
-        <strong id="temp" class="text-lg text-white font-semibold">--</strong>°C | <strong id="wind" class="text-lg text-white font-semibold">--</strong> km/h
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Rain Chance</span>
-        <strong id="rain" class="text-lg text-secondary font-bold">--%</strong>
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">Humidity & Pressure</span>
-        <strong id="humidity" class="text-lg text-white font-semibold">--</strong>% | <strong id="pressure" class="text-lg text-white font-semibold">--</strong> hPa
-      </div>
-      <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
-        <span class="text-[10px] font-mono text-outline block uppercase">CAPE Instability</span>
-        <strong id="cape" class="text-lg text-error font-bold">--</strong> J/kg
-      </div>
-    </div>
+    </header>
 
-    <!-- Radar Simulation & Chart Area -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Interactive Real-time Radar -->
-      <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[400px]">
-        <div class="flex items-center justify-between z-20 pointer-events-none">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
-            <h3 class="font-bold text-white tracking-wide uppercase text-sm">Live Weather Radar</h3>
+    <section class="grid grid-cols-1 xl:grid-cols-[280px_minmax(500px,1fr)_330px] gap-4 mt-4">
+      <!-- Left metrics -->
+      <aside class="glass rounded-2xl p-4 order-2 xl:order-1">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Live conditions</p>
+            <h2 class="text-lg font-medium text-white mt-1">Local Metrics</h2>
           </div>
-          <span id="radarTargetName" class="text-xs font-mono text-secondary bg-secondary/10 px-2.5 py-1 rounded-md border border-secondary/20">AREA: UNKNOWN</span>
+          <span class="flex items-center gap-1.5 text-[10px] text-neon"><span class="w-2 h-2 rounded-full bg-neon"></span>LIVE</span>
         </div>
 
-        <!-- Radar Animation & Real-time Blips -->
-        <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
-          <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center pointer-events-none">
-            
-            <!-- Static Grid & Rings -->
-            <div class="absolute w-full h-full rounded-full border border-[#4edea3]/30"></div>
-            <div class="absolute w-2/3 h-2/3 rounded-full border border-[#4edea3]/20"></div>
-            <div class="absolute w-1/3 h-1/3 rounded-full border border-[#4edea3]/10"></div>
-            
-            <!-- Crosshairs -->
-            <div class="absolute w-full h-[1px] bg-[#4edea3]/30"></div>
-            <div class="absolute h-full w-[1px] bg-[#4edea3]/30"></div>
-            
-            <!-- The Sweeping Beam (Green Conic Gradient) -->
-            <div class="absolute w-full h-full rounded-full animate-[spin_3s_linear_infinite] pointer-events-none" style="background: conic-gradient(from 0deg, transparent 70%, rgba(78, 222, 163, 0.15) 90%, rgba(78, 222, 163, 0.8) 100%);">
-              <div class="absolute top-0 left-[49.5%] w-[2px] h-1/2 bg-[#4edea3] shadow-[0_0_12px_#4edea3]"></div>
-            </div>
+        <div class="space-y-2">
+          <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Location</p>
+            <p id="location" class="mt-1 text-sm text-white">Loading...</p>
+          </div>
 
-            <!-- DYNAMIC BLIP CONTAINER FOR REAL-TIME STORMS -->
-            <div id="radarBlipsContainer" class="absolute w-full h-full pointer-events-auto">
-                <!-- Data will populate here -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+              <p class="text-[10px] uppercase tracking-widest text-slate-500">Local Time</p>
+              <p id="localTime" class="mt-1 text-sm text-cyan">--:--</p>
             </div>
+            <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+              <p class="text-[10px] uppercase tracking-widest text-slate-500">Temp</p>
+              <p class="mt-1 text-xl font-semibold metric-value text-white"><span id="temp">--</span>°C</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+            <div class="flex justify-between"><span class="text-xs text-slate-500">Wind Speed</span><span id="wind" class="text-sm text-white">-- km/h</span></div>
+            <div class="h-1.5 rounded-full bg-slate-800 mt-3 overflow-hidden"><div id="windBar" class="h-full bg-cyan rounded-full" style="width:0%"></div></div>
+          </div>
+
+          <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+            <div class="flex justify-between"><span class="text-xs text-slate-500">Humidity</span><span id="humidity" class="text-sm text-white">--%</span></div>
+            <div class="h-1.5 rounded-full bg-slate-800 mt-3 overflow-hidden"><div id="humidityBar" class="h-full bg-neon rounded-full" style="width:0%"></div></div>
+          </div>
+
+          <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
+            <div class="flex justify-between"><span class="text-xs text-slate-500">CAPE Instability</span><span id="cape" class="text-sm text-amber-300">-- J/kg</span></div>
+            <div class="h-1.5 rounded-full bg-slate-800 mt-3 overflow-hidden"><div id="capeBar" class="h-full bg-amber-300 rounded-full" style="width:0%"></div></div>
           </div>
         </div>
 
-        <div class="z-20 mt-auto flex items-center justify-between text-xs font-mono text-outline border-t border-[#313540] pt-4 pointer-events-none">
-          <span id="radarStatusText">Scanning area...</span>
-          <span class="text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">satellite_alt</span> Live Data</span>
+        <div class="mt-4 p-3 rounded-xl border border-neon/10 bg-neon/[.035]">
+          <p class="text-[10px] uppercase tracking-widest text-slate-500">System status</p>
+          <p id="systemStatus" class="mt-1 text-sm text-neon">● Radar network synchronized</p>
         </div>
-      </div>
+      </aside>
 
-      <!-- Strike Frequency Chart Card -->
-      <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 flex flex-col min-h-[300px]">
-        <h3 class="font-bold text-white tracking-wide uppercase text-sm mb-4">Storm Intensity Timeline</h3>
-        <div class="flex-1 flex items-center justify-center relative w-full h-full">
-          <canvas id="freqChart" class="w-full h-full"></canvas>
+      <!-- Globe -->
+      <section id="globeWrap" class="glass rounded-2xl relative overflow-hidden order-1 xl:order-2">
+        <div class="absolute z-10 left-5 top-5 pointer-events-none">
+          <p class="text-[10px] uppercase tracking-[.3em] text-cyan/70">Orbital Weather Scan</p>
+          <p class="text-xs text-slate-500 mt-1">Drag to rotate • scroll to zoom • click anomaly</p>
         </div>
-      </div>
-    </div>
+
+        <div class="absolute z-10 right-5 top-5 flex gap-2 pointer-events-none">
+          <span class="px-2.5 py-1 rounded-full text-[10px] bg-red-400/10 border border-red-400/20 text-red-300">● Critical</span>
+          <span class="px-2.5 py-1 rounded-full text-[10px] bg-yellow-300/10 border border-yellow-300/20 text-yellow-200">● Elevated</span>
+        </div>
+
+        <div id="globe"></div>
+
+        <div class="absolute bottom-5 left-5 right-5 flex justify-between items-end pointer-events-none">
+          <div>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Radar sweep</p>
+            <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-neon pulse-dot"></span><span class="text-xs text-neon">ACTIVE</span></div>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Tracked anomalies</p>
+            <p id="stormCount" class="text-lg font-semibold text-white">0</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right action/chart -->
+      <aside class="glass rounded-2xl p-4 order-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 uppercase tracking-widest">Operator tools</p>
+            <h2 class="text-lg font-medium text-white mt-1">Storm Monitor</h2>
+          </div>
+          <span class="text-xs text-cyan">AUTO</span>
+        </div>
+
+        <button id="correctBtn" class="w-full mt-5 rounded-xl border border-neon/25 bg-neon/10 text-neon py-3 text-sm hover:bg-neon/15 transition">✏️ Correct Data</button>
+
+        <div class="mt-5">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm text-white">Storm Intensity Timeline</h3>
+            <span class="text-[10px] text-slate-500">LIVE</span>
+          </div>
+          <div class="h-56"><canvas id="stormChart"></canvas></div>
+        </div>
+
+        <div class="mt-5 space-y-2">
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Current risk</span><span id="overviewRisk" class="text-white">--</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Rain chance</span><span id="overviewRain" class="text-yellow-200">--%</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Data freshness</span><span class="text-neon">Live API Sync</span></div>
+        </div>
+      </aside>
+    </section>
   </main>
 
-  <!-- Custom Alert Notification Modal -->
-  <div id="customAlertModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-[#0a0e18]/80 backdrop-blur-sm transition-opacity">
-    <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
-      <div class="flex items-center gap-3 mb-4">
-        <span id="alertIcon" class="material-symbols-outlined text-3xl">info</span>
-        <h3 id="alertTitle" class="text-white font-bold text-lg uppercase tracking-wider">Alert</h3>
+  <!-- Anomaly modal -->
+  <div id="modal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
+    <div class="glass rounded-2xl w-full max-w-md p-5 border-cyan/20">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-[10px] uppercase tracking-[.25em] text-cyan">Anomaly detail</p>
+          <h2 id="modalTitle" class="text-xl font-semibold text-white mt-1">Storm Cell</h2>
+        </div>
+        <button id="closeModal" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
       </div>
-      <div id="alertMessage" class="text-outline text-sm mb-6 leading-relaxed">System message goes here.</div>
-      <div class="flex justify-end">
-        <button onclick="closeAlert()" class="px-5 py-2 bg-primary/20 text-primary hover:bg-primary hover:text-black rounded-lg text-xs font-bold uppercase transition-colors">Close</button>
+      <div class="grid grid-cols-2 gap-2 mt-5">
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Risk Level</p><p id="modalRisk" class="mt-1 text-red-300">Critical</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Weather Status</p><p id="modalStatus" class="mt-1 text-white">Severe Thunderstorm</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Rain Chance</p><p id="modalRain" class="mt-1 text-yellow-200">82%</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Coordinates</p><p id="modalCoords" class="mt-1 text-cyan">--</p></div>
       </div>
     </div>
   </div>
 
-  <!-- Custom Data Correction Prompt Modal -->
-  <div id="correctionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-[#0a0e18]/80 backdrop-blur-sm transition-opacity">
-    <div class="bg-[#171b26] border border-[#313540] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
-      <div class="flex items-center gap-3 mb-6">
-        <span class="material-symbols-outlined text-primary text-3xl">tune</span>
-        <div>
-          <h3 class="text-white font-bold text-lg uppercase tracking-wider">Manual Override</h3>
-          <p class="text-xs text-outline font-mono">Adjust local telemetry data.</p>
-        </div>
+  <!-- Correction modal -->
+  <div id="editModal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
+    <div class="glass rounded-2xl w-full max-w-md p-5">
+      <div class="flex justify-between items-center">
+        <div><p class="text-[10px] uppercase tracking-[.25em] text-neon">Manual override</p><h2 class="text-xl font-semibold text-white mt-1">Correct Weather Data</h2></div>
+        <button id="closeEdit" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400">×</button>
       </div>
-      <div class="space-y-4 mb-6">
-        <div>
-          <label class="block text-[10px] font-mono text-outline uppercase mb-1">Actual Weather Status</label>
-          <input id="corrStatus" type="text" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="e.g. Heavy Rain, Clear">
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-[10px] font-mono text-outline uppercase mb-1">Actual Temp (°C)</label>
-            <input id="corrTemp" type="number" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="24">
-          </div>
-          <div>
-            <label class="block text-[10px] font-mono text-outline uppercase mb-1">Rain Chance (%)</label>
-            <input id="corrRain" type="number" class="w-full bg-[#0f131d] border border-[#313540] rounded-lg p-3 text-sm text-white placeholder:text-outline focus:border-primary focus:outline-none transition-colors" placeholder="90">
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-end gap-3">
-        <button onclick="closeCorrectionModal()" class="px-5 py-2 bg-[#262a35] text-white hover:bg-[#313540] rounded-lg text-xs font-bold uppercase transition-colors">Cancel</button>
-        <button onclick="executeCorrection()" class="px-5 py-2 bg-primary text-[#0a0e18] hover:bg-primary/80 rounded-lg text-xs font-bold uppercase transition-colors">Transmit</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    let currentCity = null;
-    let currentLat = null;
-    let currentLon = null;
-
-    // --- Custom Modal Functions ---
-    function showAlert(title, message, type = 'info') {
-      const modal = document.getElementById('customAlertModal');
-      document.getElementById('alertTitle').textContent = title;
-      document.getElementById('alertMessage').innerHTML = message.replace(/\n/g, '<br>');
-      const iconEl = document.getElementById('alertIcon');
       
-      if (type === 'error') {
-        iconEl.textContent = 'warning';
-        iconEl.className = 'material-symbols-outlined text-error text-3xl animate-pulse';
-      } else if (type === 'success') {
-        iconEl.textContent = 'check_circle';
-        iconEl.className = 'material-symbols-outlined text-secondary text-3xl';
-      } else {
-        iconEl.textContent = 'info';
-        iconEl.className = 'material-symbols-outlined text-primary text-3xl';
-      }
-      modal.classList.remove('hidden');
-    }
-
-    function closeAlert() { document.getElementById('customAlertModal').classList.add('hidden'); }
-
-    function openCorrectionModal() {
-      let loc = document.getElementById('location').textContent;
-      if (!loc || loc === "--" || loc === "Loading..." || loc === "City Not Found") {
-        showAlert("Error", "Please establish a valid location first.", "error");
-        return;
-      }
-      document.getElementById('corrStatus').value = '';
-      document.getElementById('corrTemp').value = '';
-      document.getElementById('corrRain').value = '';
-      document.getElementById('correctionModal').classList.remove('hidden');
-    }
-
-    function closeCorrectionModal() { document.getElementById('correctionModal').classList.add('hidden'); }
-
-    async function executeCorrection() {
-      let loc = document.getElementById('location').textContent;
-      let newStatus = document.getElementById('corrStatus').value;
-      let newTemp = document.getElementById('corrTemp').value;
-      let newRain = document.getElementById('corrRain').value;
-
-      if (newStatus || newTemp || newRain) {
-        try {
-          await fetch('/override', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
-          });
-          closeCorrectionModal();
-          showAlert("Updated", "Manual data updated successfully.", "success");
-          updateData();
-        } catch (e) {
-          closeCorrectionModal();
-          showAlert("Failed", "Could not reach the server.", "error");
-        }
-      } else {
-        showAlert("Missing Parameters", "You must provide at least one modified data point.", "error");
-      }
-    }
-
-    // --- Dynamic Radar Blips Logic ---
-    function renderRadarBlips(data) {
-      const container = document.getElementById('radarBlipsContainer');
-      container.innerHTML = ''; // Clear previous blips
-
-      // If risk is LOW or there is an error, do not show any storm blips.
-      if (!data || data.error || data.risk === 'LOW') {
-        return; 
-      }
-
-      let blipColor = 'bg-tertiary'; // Default for ELEVATED (Rain)
-      if (data.risk === 'CRITICAL') {
-        blipColor = 'bg-error'; // Red for Thunderstorms
-      }
-
-      // Generate the clickable HTML blip in the center of the radar
-      const blipHTML = `
-        <div class="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center cursor-pointer group" 
-             onclick="showBlipDetails('${data.location}', '${data.status}', '${data.risk}', '${data.temp}', '${data.rain_chance}', '${data.cape}')">
-            
-            <!-- Expanding outer ring -->
-            <div class="absolute w-[600%] h-[600%] ${blipColor} opacity-20 rounded-full animate-ping pointer-events-none"></div>
-            
-            <!-- Inner glowing core -->
-            <div class="absolute w-full h-full ${blipColor} opacity-60 rounded-full blur-[4px] pointer-events-none"></div>
-            <div class="relative w-3 h-3 ${blipColor} rounded-full border border-white"></div>
-            
-            <!-- Hover Tooltip -->
-            <div class="hidden group-hover:block absolute bottom-full mb-2 w-max px-2 py-1 text-[10px] font-mono bg-[#171b26] border border-[#313540] rounded text-white z-50">
-                Click for Storm Details
-            </div>
+      <label class="block text-xs text-slate-500 mt-5 mb-2">Weather status</label>
+      <input id="statusInput" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white" placeholder="e.g. Thunderstorm, Clear" />
+      
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-xs text-slate-500 mb-2">Temp (°C)</label>
+          <input id="tempInput" type="number" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white" />
         </div>
-      `;
-      container.innerHTML = blipHTML;
-    }
+        <div>
+          <label class="block text-xs text-slate-500 mb-2">Rain chance (%)</label>
+          <input id="rainInput" type="number" min="0" max="100" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white" />
+        </div>
+      </div>
+      
+      <button id="saveEdit" class="w-full mt-5 rounded-xl bg-neon/10 border border-neon/25 text-neon py-3 text-sm hover:bg-neon/20 transition">Transmit Override</button>
+    </div>
+  </div>
 
-    function showBlipDetails(loc, status, risk, temp, rain, cape) {
-      const title = `Anomaly Details: ${loc}`;
-      const msg = `Status: <strong class="text-white">${status}</strong>\nRisk Level: <strong class="text-white">${risk}</strong>\nTemperature: ${temp}°C\nRain Chance: ${rain}%\nCAPE (Instability): ${cape} J/kg`;
-      showAlert(title, msg, risk === 'CRITICAL' ? 'error' : 'info');
-    }
+<script>
+  let currentCity = null;
+  let currentLat = null;
+  let currentLon = null;
 
-    // --- Chart Logic ---
-    const ctx = document.getElementById('freqChart').getContext('2d');
-    const freqChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Storm Intensity Metric',
-          data: [],
-          backgroundColor: 'rgba(76, 215, 246, 0.15)',
-          borderColor: '#4cd7f6',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, max: 120, grid: { color: 'rgba(255,255,255,0.05)' } },
-          x: { grid: { display: false }, ticks: { color: '#869397', maxTicksLimit: 6 } }
-        },
-        plugins: { legend: { display: false } }
-      }
+  // ---------------- Three.js Globe Setup ----------------
+  const globeEl = document.getElementById("globe");
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 0.15, 3.15);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  globeEl.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.enablePan = false;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.45;
+  controls.minDistance = 2.35;
+  controls.maxDistance = 4.2;
+
+  const globeGroup = new THREE.Group();
+  scene.add(globeGroup);
+
+  const globe = new THREE.Mesh(
+    new THREE.SphereGeometry(1.25, 64, 64),
+    new THREE.MeshBasicMaterial({ color: 0x101c2b, wireframe: true, transparent: true, opacity: 0.62 })
+  );
+  globeGroup.add(globe);
+
+  const surface = new THREE.Mesh(
+    new THREE.SphereGeometry(1.22, 64, 64),
+    new THREE.MeshBasicMaterial({ color: 0x07111c, transparent: true, opacity: 0.7 })
+  );
+  globeGroup.add(surface);
+
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1.33, 64, 64),
+    new THREE.MeshBasicMaterial({ color: 0x4cd7f6, transparent: true, opacity: 0.035, side: THREE.BackSide })
+  );
+  globeGroup.add(atmosphere);
+
+  const sweep = new THREE.Mesh(
+    new THREE.ConeGeometry(1.45, 0.06, 64, 1, true, 0, Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.13, side: THREE.DoubleSide })
+  );
+  sweep.rotation.x = Math.PI / 2;
+  globeGroup.add(sweep);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.275, 0.006, 8, 128),
+    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.25 })
+  );
+  ring.rotation.x = Math.PI / 2;
+  globeGroup.add(ring);
+
+  // Helper arrays for managing dynamic blips
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const raycastTargets = [];
+  const sceneMeshes = [];
+
+  function latLonToVector3(lat, lon, radius=1.29) {
+    const phi = (90 - lat) * Math.PI / 180;
+    const theta = (lon + 180) * Math.PI / 180;
+    return new THREE.Vector3(
+      -radius * Math.sin(phi) * Math.cos(theta),
+       radius * Math.cos(phi),
+       radius * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+
+  function clearStorms() {
+    sceneMeshes.forEach(m => globeGroup.remove(m));
+    sceneMeshes.length = 0;
+    raycastTargets.length = 0;
+  }
+
+  function addStormBlip(lat, lon, risk, name, status, rain) {
+    const pos = latLonToVector3(lat, lon);
+    const color = risk === 'CRITICAL' ? 0xff4d6d : (risk === 'ELEVATED' ? 0xffd84d : 0x4edea3);
+    
+    const blip = new THREE.Mesh(
+      new THREE.SphereGeometry(risk === 'CRITICAL' ? 0.045 : 0.038, 20, 20),
+      new THREE.MeshBasicMaterial({ color: color })
+    );
+    blip.position.copy(pos);
+    blip.userData = { name, risk, status, rain, lat, lon, color: risk === 'CRITICAL' ? 'text-red-300' : 'text-yellow-200' };
+    
+    globeGroup.add(blip);
+    raycastTargets.push(blip);
+    sceneMeshes.push(blip);
+
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(risk === 'CRITICAL' ? 0.095 : 0.075, 20, 20),
+      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.12 })
+    );
+    glow.position.copy(pos);
+    globeGroup.add(glow);
+    sceneMeshes.push(glow);
+  }
+
+  // Pre-load global anomalies to keep the globe interesting
+  const globalStorms = [
+    {name:"Bay of Bengal Cell", lat:18.2, lon:89.0, risk:"CRITICAL", status:"Severe Thunderstorm", rain:92},
+    {name:"Central America Line", lat:14.2, lon:-88.1, risk:"ELEVATED", status:"Convective Rain", rain:75}
+  ];
+
+  function renderGlobeData(activeData) {
+    clearStorms();
+    let count = 0;
+    
+    // Render static background storms
+    globalStorms.forEach(s => {
+      addStormBlip(s.lat, s.lon, s.risk, s.name, s.status, s.rain);
+      count++;
     });
 
-    function searchCity() {
-      currentCity = document.getElementById('cityInput').value;
-      currentLat = null;
-      currentLon = null;
-      updateData();
+    // Plot user's searched/GPS location if it has a storm
+    if (activeData && activeData.risk !== 'LOW' && currentLat && currentLon) {
+       addStormBlip(currentLat, currentLon, activeData.risk, activeData.location, activeData.status, activeData.rain_chance);
+       count++;
     }
 
-    function requestGPS() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-          currentLat = position.coords.latitude;
-          currentLon = position.coords.longitude;
-          currentCity = null;
-          document.getElementById('cityInput').value = "";
-          updateData();
-        }, () => {
-          showAlert("Sensor Disabled", "GPS permission denied.", "error");
-        });
-      } else {
-        showAlert("Sensor Failure", "Geolocation not supported.", "error");
+    document.getElementById("stormCount").textContent = count;
+  }
+
+  function resize() {
+    const r = globeEl.getBoundingClientRect();
+    camera.aspect = Math.max(r.width, 1) / Math.max(r.height, 1);
+    camera.updateProjectionMatrix();
+    renderer.setSize(Math.max(r.width, 1), Math.max(r.height, 1), false);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    sweep.rotation.z += 0.009;
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  renderer.domElement.addEventListener("click", (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(raycastTargets);
+    if (hits.length) openStorm(hits[0].object.userData);
+  });
+
+  // ---------------- UI & Chart Setup ----------------
+  const mainChart = new Chart(document.getElementById("stormChart").getContext('2d'), {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: "#4cd7f6",
+        backgroundColor: "rgba(76,215,246,.08)",
+        fill: true,
+        tension: .42,
+        pointRadius: 2.5,
+        pointBackgroundColor: "#4edea3",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#64748b", font: {size: 9}, autoSkip: true, maxTicksLimit: 6 } },
+        y: { beginAtZero: true, max: 120, grid: { color: "rgba(148,163,184,.06)" }, ticks: { color: "#64748b", font: {size: 9} } }
       }
     }
+  });
 
-    async function updateData() {
-      try {
-        let url = '/data';
-        let params = new URLSearchParams();
-        if (currentCity) params.append('city', currentCity);
-        if (currentLat && currentLon) {
-          params.append('lat', currentLat);
-          params.append('lon', currentLon);
-        }
-        if (params.toString()) url += '?' + params.toString();
+  // ---------------- API Integration ----------------
+  async function updateData() {
+    try {
+      let url = '/data';
+      let params = new URLSearchParams();
+      if (currentCity) params.append('city', currentCity);
+      if (currentLat && currentLon) {
+        params.append('lat', currentLat);
+        params.append('lon', currentLon);
+      }
+      if (params.toString()) url += '?' + params.toString();
 
-        const res = await fetch(url);
-        const data = await res.json();
+      const res = await fetch(url);
+      const data = await res.json();
 
-        if (data.error) {
-          document.getElementById('location').textContent = "City Not Found";
-          document.getElementById('radarTargetName').textContent = "AREA: NOT FOUND";
-          document.getElementById('radarStatusText').textContent = "Awaiting valid input...";
-          document.getElementById('radarBlipsContainer').innerHTML = ''; // Clear radar on error
-          return;
-        }
+      if (data.error) {
+        document.getElementById("location").textContent = "Location Not Found";
+        document.getElementById("systemStatus").textContent = "● Target acquisition failed";
+        return;
+      }
 
-        freqChart.data.labels = data.labels.map(ts => {
+      // Populate DOM elements
+      document.getElementById("location").textContent = data.location;
+      document.getElementById("temp").textContent = data.temp;
+      document.getElementById("wind").textContent = data.wind + " km/h";
+      document.getElementById("humidity").textContent = data.humidity + "%";
+      document.getElementById("cape").textContent = data.cape + " J/kg";
+      document.getElementById("overviewRisk").textContent = data.risk;
+      document.getElementById("overviewRain").textContent = data.rain_chance + "%";
+      
+      document.getElementById("overviewRisk").className = data.risk === 'CRITICAL' ? 'text-red-300' : (data.risk === 'ELEVATED' ? 'text-yellow-200' : 'text-neon');
+
+      // Update progress bars
+      document.getElementById("windBar").style.width = Math.min(data.wind * 2, 100) + "%";
+      document.getElementById("humidityBar").style.width = data.humidity + "%";
+      document.getElementById("capeBar").style.width = Math.min(data.cape / 30, 100) + "%";
+      
+      // Update Time
+      let now = new Date();
+      document.getElementById("localTime").textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' }) + " " + (data.timezone_abbr || '');
+      document.getElementById("systemStatus").textContent = "● Target Acquired: " + data.status;
+
+      // Update Chart
+      mainChart.data.labels = data.labels.map(ts => {
           let date = new Date(ts * 1000);
           return date.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      });
+      mainChart.data.datasets[0].data = data.values;
+      mainChart.update();
+
+      // Plot active data on the 3D globe
+      renderGlobeData(data);
+
+    } catch (e) {
+      console.error("Telemetry API Error:", e);
+      document.getElementById("systemStatus").textContent = "● Telemetry Sync Failed";
+    }
+  }
+
+  // Input Handlers
+  document.getElementById("searchBtn").onclick = () => {
+    currentCity = document.getElementById("cityInput").value.trim();
+    currentLat = null;
+    currentLon = null;
+    updateData();
+  };
+
+  document.getElementById("cityInput").addEventListener("keydown", e => { 
+    if (e.key === "Enter") document.getElementById("searchBtn").click(); 
+  });
+
+  document.getElementById("gpsBtn").onclick = () => {
+    if (!navigator.geolocation) return alert("Geolocation is not supported by this browser.");
+    navigator.geolocation.getCurrentPosition(
+      p => {
+        currentLat = p.coords.latitude;
+        currentLon = p.coords.longitude;
+        currentCity = null;
+        document.getElementById("cityInput").value = "";
+        updateData();
+      },
+      () => alert("GPS permission denied.")
+    );
+  };
+
+  // ---------------- Modal Handlers ----------------
+  const modal = document.getElementById("modal");
+  const editModal = document.getElementById("editModal");
+
+  function openStorm(s) {
+    document.getElementById("modalTitle").textContent = s.name;
+    document.getElementById("modalRisk").textContent = s.risk;
+    document.getElementById("modalRisk").className = "mt-1 " + (s.color || 'text-white');
+    document.getElementById("modalStatus").textContent = s.status;
+    document.getElementById("modalRain").textContent = s.rain + "%";
+    document.getElementById("modalCoords").textContent = `${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°`;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+  
+  function closeStorm() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+  document.getElementById("closeModal").onclick = closeStorm;
+  modal.addEventListener("click", e => { if (e.target === modal) closeStorm(); });
+
+  // Manual Override Form Handler
+  document.getElementById("correctBtn").onclick = () => {
+    let loc = document.getElementById('location').textContent;
+    if (loc === "Loading..." || loc === "Location Not Found") return alert("Awaiting valid location telemetry.");
+    document.getElementById("statusInput").value = "";
+    document.getElementById("tempInput").value = "";
+    document.getElementById("rainInput").value = "";
+    editModal.classList.remove("hidden"); 
+    editModal.classList.add("flex");
+  };
+
+  document.getElementById("closeEdit").onclick = () => {
+    editModal.classList.add("hidden"); 
+    editModal.classList.remove("flex");
+  };
+
+  document.getElementById("saveEdit").onclick = async () => {
+    let loc = document.getElementById('location').textContent;
+    let newStatus = document.getElementById('statusInput').value;
+    let newTemp = document.getElementById('tempInput').value;
+    let newRain = document.getElementById('rainInput').value;
+
+    if (newStatus || newTemp || newRain) {
+      try {
+        await fetch('/override', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
         });
-        freqChart.data.datasets[0].data = data.values;
-        freqChart.update();
-
-        // Update Text Metrics
-        document.getElementById('location').textContent = data.location;
-        document.getElementById('risk').textContent = data.risk;
-        document.getElementById('status').textContent = data.status;
-        document.getElementById('temp').textContent = data.temp;
-        document.getElementById('wind').textContent = data.wind;
-        document.getElementById('humidity').textContent = data.humidity;
-        document.getElementById('pressure').textContent = data.pressure;
-        document.getElementById('cape').textContent = data.cape;
-        document.getElementById('rain').textContent = data.rain_chance;
-
-        // Update Radar UI dynamically based on the active location
-        document.getElementById('radarTargetName').textContent = "AREA: " + data.location.toUpperCase();
-        document.getElementById('radarStatusText').textContent = "Scanning over " + data.location + " | Status: " + data.status;
-        
-        // Render Dynamic Storm Blips if active storms/rain exist
-        renderRadarBlips(data);
-
-        let now = new Date();
-        document.getElementById('localTime').textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' });
-        document.getElementById('tzAbbr').textContent = "(" + data.timezone_abbr + ")";
+        editModal.classList.add("hidden");
+        editModal.classList.remove("flex");
+        updateData(); // Refresh API data
       } catch (e) {
-        console.error("Telemetry sync error:", e);
+        alert("Failed to transmit override data.");
       }
     }
+  };
 
-    setInterval(updateData, 5000);
-    updateData();
-  </script>
+  // Initialization
+  renderGlobeData(null); // Plot static global anomalies on startup
+  setInterval(updateData, 5000);
+  updateData();
+
+</script>
 </body>
 </html>
