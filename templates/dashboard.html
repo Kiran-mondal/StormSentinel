@@ -41,7 +41,7 @@
         <span class="font-bold text-xl tracking-tight uppercase text-white">StormSentinel</span>
         <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-[#4edea3]/10 border border-[#4edea3]/30">
           <span class="w-2 h-2 rounded-full bg-[#4edea3] animate-ping"></span>
-          <span class="text-xs font-mono text-[#4edea3] uppercase tracking-wider">RADAR FEED ONLINE</span>
+          <span class="text-xs font-mono text-[#4edea3] uppercase tracking-wider">RADAR ONLINE</span>
         </div>
       </div>
 
@@ -64,10 +64,10 @@
     </div>
   </header>
 
-  <!-- Main Tactical HUD Area -->
+  <!-- Main HUD Area -->
   <main class="w-full px-6 py-6 flex-1 flex flex-col gap-6 max-w-7xl mx-auto z-10">
     
-    <!-- Top Metrics Overview Grid -->
+    <!-- Top Metrics Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-[#171b26] border border-[#313540] p-4 rounded-xl">
         <span class="text-[10px] font-mono text-outline block uppercase">Location</span>
@@ -106,19 +106,19 @@
     <!-- Radar Simulation & Chart Area -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      <!-- Interactive ATC Tactical Radar -->
+      <!-- Interactive Real-time Radar -->
       <div class="lg:col-span-2 bg-[#171b26] border border-[#313540] rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[400px]">
-        <div class="flex items-center justify-between z-20">
+        <div class="flex items-center justify-between z-20 pointer-events-none">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
-            <h3 class="font-bold text-white tracking-wide uppercase text-sm">ATC Tactical Radar</h3>
+            <h3 class="font-bold text-white tracking-wide uppercase text-sm">Live Weather Radar</h3>
           </div>
-          <span id="radarTargetName" class="text-xs font-mono text-secondary bg-secondary/10 px-2.5 py-1 rounded-md border border-secondary/20">TARGET: UNKNOWN</span>
+          <span id="radarTargetName" class="text-xs font-mono text-secondary bg-secondary/10 px-2.5 py-1 rounded-md border border-secondary/20">AREA: UNKNOWN</span>
         </div>
 
-        <!-- ATC Sweeping Radar Animation -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-          <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center">
+        <!-- Radar Animation & Real-time Blips -->
+        <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
+          <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center pointer-events-none">
             
             <!-- Static Grid & Rings -->
             <div class="absolute w-full h-full rounded-full border border-[#4edea3]/30"></div>
@@ -130,20 +130,20 @@
             <div class="absolute h-full w-[1px] bg-[#4edea3]/30"></div>
             
             <!-- The Sweeping Beam (Green Conic Gradient) -->
-            <div class="absolute w-full h-full rounded-full animate-[spin_3s_linear_infinite]" style="background: conic-gradient(from 0deg, transparent 70%, rgba(78, 222, 163, 0.15) 90%, rgba(78, 222, 163, 0.8) 100%);">
-              <!-- Leading Edge Line -->
+            <div class="absolute w-full h-full rounded-full animate-[spin_3s_linear_infinite] pointer-events-none" style="background: conic-gradient(from 0deg, transparent 70%, rgba(78, 222, 163, 0.15) 90%, rgba(78, 222, 163, 0.8) 100%);">
               <div class="absolute top-0 left-[49.5%] w-[2px] h-1/2 bg-[#4edea3] shadow-[0_0_12px_#4edea3]"></div>
             </div>
 
-            <!-- Simulated Storm Cell Blips -->
-            <div class="absolute top-[20%] left-[30%] w-2 h-2 bg-error rounded-full animate-[ping_3s_infinite]"></div>
-            <div class="absolute bottom-[25%] right-[20%] w-1.5 h-1.5 bg-tertiary rounded-full animate-[ping_3s_infinite]" style="animation-delay: 1.5s;"></div>
+            <!-- DYNAMIC BLIP CONTAINER FOR REAL-TIME STORMS -->
+            <div id="radarBlipsContainer" class="absolute w-full h-full pointer-events-auto">
+                <!-- Data will populate here -->
+            </div>
           </div>
         </div>
 
-        <div class="z-20 mt-auto flex items-center justify-between text-xs font-mono text-outline border-t border-[#313540] pt-4">
-          <span id="radarStatusText">Scanning sector...</span>
-          <span class="text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">satellite_alt</span> Uplink: Active</span>
+        <div class="z-20 mt-auto flex items-center justify-between text-xs font-mono text-outline border-t border-[#313540] pt-4 pointer-events-none">
+          <span id="radarStatusText">Scanning area...</span>
+          <span class="text-secondary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">satellite_alt</span> Live Data</span>
         </div>
       </div>
 
@@ -164,9 +164,9 @@
         <span id="alertIcon" class="material-symbols-outlined text-3xl">info</span>
         <h3 id="alertTitle" class="text-white font-bold text-lg uppercase tracking-wider">Alert</h3>
       </div>
-      <p id="alertMessage" class="text-outline text-sm mb-6">System message goes here.</p>
+      <div id="alertMessage" class="text-outline text-sm mb-6 leading-relaxed">System message goes here.</div>
       <div class="flex justify-end">
-        <button onclick="closeAlert()" class="px-5 py-2 bg-primary/20 text-primary hover:bg-primary hover:text-black rounded-lg text-xs font-bold uppercase transition-colors">Acknowledge</button>
+        <button onclick="closeAlert()" class="px-5 py-2 bg-primary/20 text-primary hover:bg-primary hover:text-black rounded-lg text-xs font-bold uppercase transition-colors">Close</button>
       </div>
     </div>
   </div>
@@ -210,11 +210,13 @@
     let currentLat = null;
     let currentLon = null;
 
+    // --- Custom Modal Functions ---
     function showAlert(title, message, type = 'info') {
       const modal = document.getElementById('customAlertModal');
       document.getElementById('alertTitle').textContent = title;
-      document.getElementById('alertMessage').textContent = message;
+      document.getElementById('alertMessage').innerHTML = message.replace(/\n/g, '<br>');
       const iconEl = document.getElementById('alertIcon');
+      
       if (type === 'error') {
         iconEl.textContent = 'warning';
         iconEl.className = 'material-symbols-outlined text-error text-3xl animate-pulse';
@@ -233,7 +235,7 @@
     function openCorrectionModal() {
       let loc = document.getElementById('location').textContent;
       if (!loc || loc === "--" || loc === "Loading..." || loc === "City Not Found") {
-        showAlert("Uplink Error", "Please establish a valid location lock before applying manual overrides.", "error");
+        showAlert("Error", "Please establish a valid location first.", "error");
         return;
       }
       document.getElementById('corrStatus').value = '';
@@ -258,17 +260,60 @@
             body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
           });
           closeCorrectionModal();
-          showAlert("Grid Updated", "Manual telemetry override transmitted successfully.", "success");
+          showAlert("Updated", "Manual data updated successfully.", "success");
           updateData();
         } catch (e) {
           closeCorrectionModal();
-          showAlert("Transmission Failed", "Could not reach the telemetry server.", "error");
+          showAlert("Failed", "Could not reach the server.", "error");
         }
       } else {
         showAlert("Missing Parameters", "You must provide at least one modified data point.", "error");
       }
     }
 
+    // --- Dynamic Radar Blips Logic ---
+    function renderRadarBlips(data) {
+      const container = document.getElementById('radarBlipsContainer');
+      container.innerHTML = ''; // Clear previous blips
+
+      // If risk is LOW or there is an error, do not show any storm blips.
+      if (!data || data.error || data.risk === 'LOW') {
+        return; 
+      }
+
+      let blipColor = 'bg-tertiary'; // Default for ELEVATED (Rain)
+      if (data.risk === 'CRITICAL') {
+        blipColor = 'bg-error'; // Red for Thunderstorms
+      }
+
+      // Generate the clickable HTML blip in the center of the radar
+      const blipHTML = `
+        <div class="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center cursor-pointer group" 
+             onclick="showBlipDetails('${data.location}', '${data.status}', '${data.risk}', '${data.temp}', '${data.rain_chance}', '${data.cape}')">
+            
+            <!-- Expanding outer ring -->
+            <div class="absolute w-[600%] h-[600%] ${blipColor} opacity-20 rounded-full animate-ping pointer-events-none"></div>
+            
+            <!-- Inner glowing core -->
+            <div class="absolute w-full h-full ${blipColor} opacity-60 rounded-full blur-[4px] pointer-events-none"></div>
+            <div class="relative w-3 h-3 ${blipColor} rounded-full border border-white"></div>
+            
+            <!-- Hover Tooltip -->
+            <div class="hidden group-hover:block absolute bottom-full mb-2 w-max px-2 py-1 text-[10px] font-mono bg-[#171b26] border border-[#313540] rounded text-white z-50">
+                Click for Storm Details
+            </div>
+        </div>
+      `;
+      container.innerHTML = blipHTML;
+    }
+
+    function showBlipDetails(loc, status, risk, temp, rain, cape) {
+      const title = `Anomaly Details: ${loc}`;
+      const msg = `Status: <strong class="text-white">${status}</strong>\nRisk Level: <strong class="text-white">${risk}</strong>\nTemperature: ${temp}°C\nRain Chance: ${rain}%\nCAPE (Instability): ${cape} J/kg`;
+      showAlert(title, msg, risk === 'CRITICAL' ? 'error' : 'info');
+    }
+
+    // --- Chart Logic ---
     const ctx = document.getElementById('freqChart').getContext('2d');
     const freqChart = new Chart(ctx, {
       type: 'line',
@@ -311,10 +356,10 @@
           document.getElementById('cityInput').value = "";
           updateData();
         }, () => {
-          showAlert("Sensor Disabled", "GPS permission denied or unavailable on this device.", "error");
+          showAlert("Sensor Disabled", "GPS permission denied.", "error");
         });
       } else {
-        showAlert("Sensor Failure", "Geolocation is not supported by your current browser.", "error");
+        showAlert("Sensor Failure", "Geolocation not supported.", "error");
       }
     }
 
@@ -334,8 +379,9 @@
 
         if (data.error) {
           document.getElementById('location').textContent = "City Not Found";
-          document.getElementById('radarTargetName').textContent = "TARGET: NOT FOUND";
+          document.getElementById('radarTargetName').textContent = "AREA: NOT FOUND";
           document.getElementById('radarStatusText').textContent = "Awaiting valid input...";
+          document.getElementById('radarBlipsContainer').innerHTML = ''; // Clear radar on error
           return;
         }
 
@@ -346,7 +392,7 @@
         freqChart.data.datasets[0].data = data.values;
         freqChart.update();
 
-        // Update the top UI metrics
+        // Update Text Metrics
         document.getElementById('location').textContent = data.location;
         document.getElementById('risk').textContent = data.risk;
         document.getElementById('status').textContent = data.status;
@@ -357,9 +403,12 @@
         document.getElementById('cape').textContent = data.cape;
         document.getElementById('rain').textContent = data.rain_chance;
 
-        // Sync Radar Text with the current city location and risk status
-        document.getElementById('radarTargetName').textContent = "TARGET: " + data.location.toUpperCase();
-        document.getElementById('radarStatusText').textContent = "Scanning sector over " + data.location + " | Risk: " + data.risk;
+        // Update Radar UI dynamically based on the active location
+        document.getElementById('radarTargetName').textContent = "AREA: " + data.location.toUpperCase();
+        document.getElementById('radarStatusText').textContent = "Scanning over " + data.location + " | Status: " + data.status;
+        
+        // Render Dynamic Storm Blips if active storms/rain exist
+        renderRadarBlips(data);
 
         let now = new Date();
         document.getElementById('localTime').textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' });
@@ -373,5 +422,4 @@
     updateData();
   </script>
 </body>
-  </html>
-  
+</html>
