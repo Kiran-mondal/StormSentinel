@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StormSentinel — Weather Intelligence</title>
-    <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
-  
+
+  <!-- Favicon Link -->
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -24,7 +26,9 @@
       }
     }
   </script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Stable Three.js & Chart.js CDNs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -70,7 +74,6 @@
 
   <main class="relative max-w-[1600px] mx-auto px-4 md:px-6 py-4 z-10">
     
-    <!-- Header -->
     <header class="glass rounded-2xl px-4 py-3 flex flex-col lg:flex-row items-center gap-3 relative mb-6">
       <div class="flex items-center gap-3 min-w-fit">
         <div class="h-10 w-10 rounded-xl bg-neon/10 border border-neon/25 grid place-items-center text-xl shadow-glow">⚡</div>
@@ -93,7 +96,6 @@
 
     <section class="grid grid-cols-1 xl:grid-cols-[280px_minmax(500px,1fr)_330px] gap-4">
       
-      <!-- Left Metrics -->
       <aside class="glass rounded-2xl p-4 order-2 xl:order-1">
         <div class="flex items-center justify-between mb-5">
           <div>
@@ -143,7 +145,6 @@
         </div>
       </aside>
 
-      <!-- Three.js Globe Section -->
       <section id="globeWrap" class="glass rounded-2xl relative overflow-hidden order-1 xl:order-2">
         <div class="absolute z-10 left-5 top-5 pointer-events-none">
           <p class="text-[10px] uppercase tracking-[.3em] text-cyan/70">Orbital Weather Scan</p>
@@ -164,7 +165,6 @@
         </div>
       </section>
 
-      <!-- Right Action & Chart -->
       <aside class="glass rounded-2xl p-4 order-3">
         <div class="flex items-center justify-between">
           <div>
@@ -246,7 +246,7 @@
   let currentLon = null;
 
   // --- Three.js Globe Setup ---
-  const globeEl = document.getElementById("globe");
+  const globeEl = document.getElementById(`globe`);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 0.15, 3.15);
@@ -286,7 +286,6 @@
   sweep.rotation.x = Math.PI / 2;
   globeGroup.add(sweep);
 
-  // --- Raycaster Setup for Clicking Storms ---
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   const raycastTargets = [];
@@ -308,20 +307,20 @@
     raycastTargets.length = 0;
   }
 
-  function addStormBlip(lat, lon, risk, name = "Storm Cell", status = "Active Anomaly", rain = "--") {
+  function addStormBlip(lat, lon, risk, name = `Storm Cell`, status = `Active Anomaly`, rain = `--`) {
     const pos = latLonToVector3(lat, lon);
-    const color = risk === 'CRITICAL' ? 0xff4d6d : (risk === 'ELEVATED' ? 0xffd84d : 0x4edea3);
+    const color = risk === `CRITICAL` ? 0xff4d6d : (risk === `ELEVATED` ? 0xffd84d : 0x4edea3);
     
     const blip = new THREE.Mesh(
       new THREE.SphereGeometry(0.04, 20, 20),
       new THREE.MeshBasicMaterial({ color: color })
     );
     blip.position.copy(pos);
-    blip.userData = { name, risk, status, rain, lat, lon }; // Store data for the click event
+    blip.userData = { name, risk, status, rain, lat, lon };
     
     globeGroup.add(blip);
     sceneMeshes.push(blip);
-    raycastTargets.push(blip); // Make it clickable
+    raycastTargets.push(blip);
 
     const glow = new THREE.Mesh(
       new THREE.SphereGeometry(0.09, 20, 20),
@@ -336,17 +335,15 @@
     clearStorms();
     let count = 0;
     
-    // Static demo storms to keep globe interesting
-    addStormBlip(18.2, 89.0, 'CRITICAL', 'Bay of Bengal Cell', 'Severe Thunderstorm', 92);
-    addStormBlip(14.2, -88.1, 'ELEVATED', 'Central America Line', 'Convective Rain', 75);
+    addStormBlip(18.2, 89.0, `CRITICAL`, `Bay of Bengal Cell`, `Severe Thunderstorm`, 92);
+    addStormBlip(14.2, -88.1, `ELEVATED`, `Central America Line`, `Convective Rain`, 75);
     count += 2;
 
-    // Render real-time user searched storm
-    if (data && data.risk !== 'LOW' && data.location !== 'Offline/Error') {
+    if (data && data.risk !== `LOW` && data.location !== `Offline/Error`) {
        addStormBlip(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
        count++;
     }
-    document.getElementById("stormCount").textContent = count;
+    document.getElementById(`stormCount`).textContent = count;
   }
 
   function resize() {
@@ -355,7 +352,7 @@
     camera.updateProjectionMatrix();
     renderer.setSize(Math.max(r.width, 1), Math.max(r.height, 1), false);
   }
-  window.addEventListener("resize", resize);
+  window.addEventListener(`resize`, resize);
   resize();
 
   function animate() {
@@ -366,8 +363,7 @@
   }
   animate();
 
-  // Raycaster Click Event Listener
-  renderer.domElement.addEventListener("click", (event) => {
+  renderer.domElement.addEventListener(`click`, (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -379,14 +375,14 @@
   });
 
   // --- Chart Setup ---
-  const mainChart = new Chart(document.getElementById("stormChart").getContext('2d'), {
-    type: "line",
+  const mainChart = new Chart(document.getElementById(`stormChart`).getContext(`2d`), {
+    type: `line`,
     data: {
       labels: [],
       datasets: [{
         data: [],
-        borderColor: "#4cd7f6",
-        backgroundColor: "rgba(76,215,246,.08)",
+        borderColor: `#4cd7f6`,
+        backgroundColor: `rgba(76,215,246,.08)`,
         fill: true,
         tension: .42,
         pointRadius: 2,
@@ -398,8 +394,8 @@
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { display: false }, ticks: { color: "#64748b", font: {size: 9} } },
-        y: { beginAtZero: true, max: 120, grid: { color: "rgba(148,163,184,.06)" }, ticks: { color: "#64748b", font: {size: 9} } }
+        x: { grid: { display: false }, ticks: { color: `#64748b`, font: {size: 9} } },
+        y: { beginAtZero: true, max: 120, grid: { color: `rgba(148,163,184,.06)` }, ticks: { color: `#64748b`, font: {size: 9} } }
       }
     }
   });
@@ -407,149 +403,172 @@
   // --- API & Data Logic ---
   async function updateData() {
     try {
-      let url = '/data';
+      let url = `/data`;
       let params = new URLSearchParams();
-      if (currentCity) params.append('city', currentCity);
+      if (currentCity) params.append(`city`, currentCity);
       if (currentLat && currentLon) {
-        params.append('lat', currentLat);
-        params.append('lon', currentLon);
+        params.append(`lat`, currentLat);
+        params.append(`lon`, currentLon);
       }
-      if (params.toString()) url += '?' + params.toString();
+      if (params.toString()) url += `?` + params.toString();
 
       const res = await fetch(url);
       
-      if (!res.ok) throw new Error("API Error");
+      if (!res.ok) throw new Error(`API Error`);
       const data = await res.json();
 
-      if (data.error || data.location === "Offline/Error") {
-        document.getElementById("location").textContent = "Location Not Found";
-        document.getElementById("systemStatus").textContent = "● API Fetch Failed (Check Backend)";
-        document.getElementById("systemStatus").className = "mt-1 text-sm text-red-400";
+      if (data.error || data.location === `Offline/Error`) {
+        document.getElementById(`location`).textContent = `Location Not Found`;
+        document.getElementById(`systemStatus`).textContent = `● API Fetch Failed (Check Backend)`;
+        document.getElementById(`systemStatus`).className = `mt-1 text-sm text-red-400`;
         return;
       }
 
       // Update UI Text
-      document.getElementById("location").textContent = data.location;
-      document.getElementById("temp").textContent = data.temp;
-      document.getElementById("wind").textContent = data.wind;
-      document.getElementById("humidity").textContent = data.humidity + "%";
-      document.getElementById("pressure").textContent = data.pressure + " hPa";
-      document.getElementById("cape").textContent = data.cape + " J/kg";
+      document.getElementById(`location`).textContent = data.location;
+      document.getElementById(`temp`).textContent = data.temp;
+      document.getElementById(`wind`).textContent = data.wind;
+      document.getElementById(`humidity`).textContent = data.humidity + `%`;
+      document.getElementById(`pressure`).textContent = data.pressure + ` hPa`;
+      document.getElementById(`cape`).textContent = data.cape + ` J/kg`;
       
-      document.getElementById("overviewStatus").textContent = data.status;
-      document.getElementById("overviewRisk").textContent = data.risk;
-      document.getElementById("overviewRain").textContent = data.rain_chance + "%";
+      document.getElementById(`overviewStatus`).textContent = data.status;
+      document.getElementById(`overviewRisk`).textContent = data.risk;
+      document.getElementById(`overviewRain`).textContent = data.rain_chance + `%`;
       
-      // Update Colors based on Risk
-      let riskColor = data.risk === 'CRITICAL' ? 'text-red-400' : (data.risk === 'ELEVATED' ? 'text-yellow-300' : 'text-neon');
-      document.getElementById(overviewRisk").className = `font-bold ${riskColor}`;
+      let riskColor = data.risk === `CRITICAL` ? `text-red-400` : (data.risk === `ELEVATED` ? `text-yellow-300` : `text-neon`);
+      document.getElementById(`overviewRisk`).className = `font-bold ${riskColor}`;
 
-      // Progress Bars
-      document.getElementById("windBar").style.width = Math.min(data.wind * 2, 100) + "%";
-      document.getElementById("humidityBar").style.width = (data.humidity || 0) + "%";
-      document.getElementById("capeBar").style.width = Math.min((data.cape || 0) / 30, 100) + "%";
+        // Progress Bars
+      document.getElementById(`windBar`).style.width = Math.min(data.wind * 2, 100) + `%`;
+      document.getElementById(`humidityBar`).style.width = (data.humidity || 0) + `%`;
+      document.getElementById(`capeBar`).style.width = Math.min((data.cape || 0) / 30, 100) + `%`;
       
-      // Update Time
+      // Update Time (Safely split into multiple lines)
       let now = new Date();
-      document.getElementById("localTime").textContent = now.toLocaleTimeString([], { timeZone: data.timezone || 'UTC', hour: '2-digit', minute: '2-digit' }) + " " + (data.timezone_abbr || '');
-      document.getElementById("systemStatus").textContent = "● Live Data Synced";
-      document.getElementById("systemStatus").className = "mt-1 text-sm text-neon";
+      let timeOpts = { timeZone: data.timezone || `UTC`, hour: `2-digit`, minute: `2-digit` };
+      let formattedTime = now.toLocaleTimeString([], timeOpts);
+      let tzAbbr = data.timezone_abbr || ``;
+      
+      document.getElementById(`localTime`).textContent = `${formattedTime}${tzAbbr}`;
+      document.getElementById(`systemStatus`).textContent = `● Live Data Synced`;
+      document.getElementById(`systemStatus`).className = `mt-1 text-sm text-neon`;
 
       // Chart Update
       if(data.labels && data.values) {
           mainChart.data.labels = data.labels.map(ts => {
               let date = new Date(ts * 1000);
-              return date.toLocaleTimeString([], { timeZone: data.timezone || 'UTC', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+              let chartOpts = { timeZone: data.timezone || `UTC`, hour: `2-digit`, minute: `2-digit`, second: `2-digit`, hour12: false };
+              return date.toLocaleTimeString([], chartOpts);
           });
           mainChart.data.datasets[0].data = data.values;
           mainChart.update();
       }
 
-      // Render Globe Data
       renderGlobeData(data);
 
     } catch (e) {
-      console.error("Telemetry API Error:", e);
-      document.getElementById("systemStatus").textContent = "● Cannot connect to Python Server";
-      document.getElementById("systemStatus").className = "mt-1 text-sm text-red-400";
+      console.error(e);
+      document.getElementById(`systemStatus`).textContent = `● Cannot connect to Python Server`;
+      document.getElementById(`systemStatus`).className = `mt-1 text-sm text-red-400`;
     }
   }
 
   // --- Controls ---
-  document.getElementById("searchBtn").onclick = () => {
-    currentCity = document.getElementById("cityInput").value.trim();
+  document.getElementById(`searchBtn`).onclick = () => {
+    currentCity = document.getElementById(`cityInput`).value.trim();
     currentLat = null;
     currentLon = null;
     updateData();
   };
   
-  document.getElementById("cityInput").addEventListener("keydown", e => { 
-    if (e.key === "Enter") document.getElementById("searchBtn").click(); 
+  document.getElementById(`cityInput`).addEventListener(`keydown`, e => { 
+    if (e.key === `Enter`) document.getElementById(`searchBtn`).click(); 
   });
 
-  document.getElementById("gpsBtn").onclick = () => {
-    if (!navigator.geolocation) return alert("Geolocation not supported.");
+  document.getElementById(`gpsBtn`).onclick = () => {
+    if (!navigator.geolocation) return alert(`Geolocation not supported.`);
     navigator.geolocation.getCurrentPosition(
       p => {
         currentLat = p.coords.latitude;
         currentLon = p.coords.longitude;
         currentCity = null;
-        document.getElementById("cityInput").value = "";
+        document.getElementById(`cityInput`).value = ``;
         updateData();
       },
-      () => alert("GPS permission denied.")
+      () => alert(`GPS permission denied.`)
     );
   };
 
   // --- Modal Logic ---
-  const modal = document.getElementById("modal");
+  const modal = document.getElementById(`modal`);
   
   function openStorm(s) {
-    document.getElementById("modalTitle").textContent = s.name;
-    document.getElementById("modalRisk").textContent = s.risk;
-    document.getElementById("modalRisk").className = "mt-1 font-bold " + (s.risk === 'CRITICAL' ? 'text-red-400' : 'text-yellow-300');
-    document.getElementById("modalStatus").textContent = s.status;
-    document.getElementById("modalRain").textContent = s.rain + "%";
-    document.getElementById("modalCoords").textContent = `${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°`;
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+    document.getElementById(`modalTitle`).textContent = s.name;
+    document.getElementById(`modalRisk`).textContent = s.risk;
+    
+    let colorClass = s.risk === `CRITICAL` ? `text-red-400` : `text-yellow-300`;
+    document.getElementById(`modalRisk`).className = `mt-1 font-bold ${colorClass}`;
+    
+    document.getElementById(`modalStatus`).textContent = s.status;
+    document.getElementById(`modalRain`).textContent = s.rain + `%`;
+    
+    let latString = s.lat.toFixed(2);
+    let lonString = s.lon.toFixed(2);
+    document.getElementById(`modalCoords`).textContent = `${latString}°, ${lonString}°`;
+    
+    modal.classList.remove(`hidden`);
+    modal.classList.add(`flex`);
   }
   
-  function closeStorm() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
-  document.getElementById("closeModal").onclick = closeStorm;
-  modal.addEventListener("click", e => { if (e.target === modal) closeStorm(); });
+  function closeStorm() { 
+    modal.classList.add(`hidden`); 
+    modal.classList.remove(`flex`); 
+  }
+  document.getElementById(`closeModal`).onclick = closeStorm;
+  modal.addEventListener(`click`, e => { if (e.target === modal) closeStorm(); });
 
-  const editModal = document.getElementById("editModal");
-  document.getElementById("correctBtn").onclick = () => {
-    let loc = document.getElementById('location').textContent;
-    if (loc === "Loading..." || loc === "Location Not Found" || loc === "Awaiting Data...") return alert("Awaiting valid location telemetry.");
-    editModal.classList.remove("hidden"); 
-    editModal.classList.add("flex");
+  const editModal = document.getElementById(`editModal`);
+  document.getElementById(`correctBtn`).onclick = () => {
+    let loc = document.getElementById(`location`).textContent;
+    if (loc === `Loading...` || loc === `Location Not Found` || loc === `Awaiting Data...`) {
+      return alert(`Awaiting valid location telemetry.`);
+    }
+    editModal.classList.remove(`hidden`); 
+    editModal.classList.add(`flex`);
   };
 
-  document.getElementById("closeEdit").onclick = () => {
-    editModal.classList.add("hidden"); 
-    editModal.classList.remove("flex");
+  document.getElementById(`closeEdit`).onclick = () => {
+    editModal.classList.add(`hidden`); 
+    editModal.classList.remove(`flex`);
   };
 
-  document.getElementById("saveEdit").onclick = async () => {
-    let loc = document.getElementById('location').textContent;
-    let newStatus = document.getElementById('statusInput').value;
-    let newTemp = document.getElementById('tempInput').value;
-    let newRain = document.getElementById('rainInput').value;
+  document.getElementById(`saveEdit`).onclick = async () => {
+    let loc = document.getElementById(`location`).textContent;
+    let newStatus = document.getElementById(`statusInput`).value;
+    let newTemp = document.getElementById(`tempInput`).value;
+    let newRain = document.getElementById(`rainInput`).value;
 
     if (newStatus || newTemp || newRain) {
       try {
-        await fetch('/override', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ location: loc, status: newStatus, temp: newTemp, rain_chance: newRain })
+        let payload = { 
+          location: loc, 
+          status: newStatus, 
+          temp: newTemp, 
+          rain_chance: newRain 
+        };
+        
+        await fetch(`/override`, {
+          method: `POST`,
+          headers: { 'Content-Type': `application/json` },
+          body: JSON.stringify(payload)
         });
-        editModal.classList.add("hidden");
-        editModal.classList.remove("flex");
+        
+        editModal.classList.add(`hidden`);
+        editModal.classList.remove(`flex`);
         updateData(); 
       } catch (e) {
-        alert("Failed to transmit override data. Ensure backend is running.");
+        alert(`Failed to transmit override data. Ensure backend is running.`);
       }
     }
   };
