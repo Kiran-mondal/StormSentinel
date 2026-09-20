@@ -56,14 +56,6 @@
     }
     #globeWrap { min-height: 560px; }
     #globe { position:absolute; inset:0; width:100%; height:100%; }
-    .metric-value { text-shadow: 0 0 18px rgba(78,222,163,.22); }
-    .scanline {
-      animation: scan 3.8s linear infinite;
-    }
-    @keyframes scan {
-      from { transform: translateX(-110%); }
-      to { transform: translateX(110%); }
-    }
     .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
     @keyframes pulse {
       0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,.35); }
@@ -76,9 +68,10 @@
 <body class="text-slate-200">
   <div class="fixed inset-0 pointer-events-none grid-bg"></div>
 
-  <main class="relative max-w-[1600px] mx-auto px-4 md:px-6 py-4">
+  <main class="relative max-w-[1600px] mx-auto px-4 md:px-6 py-4 z-10">
+    
     <!-- Header -->
-    <header class="glass rounded-2xl px-4 py-3 flex flex-col lg:flex-row items-center gap-3 sticky top-3 z-30">
+    <header class="glass rounded-2xl px-4 py-3 flex flex-col lg:flex-row items-center gap-3 relative mb-6">
       <div class="flex items-center gap-3 min-w-fit">
         <div class="h-10 w-10 rounded-xl bg-neon/10 border border-neon/25 grid place-items-center text-xl shadow-glow">⚡</div>
         <div>
@@ -98,8 +91,9 @@
       </div>
     </header>
 
-    <section class="grid grid-cols-1 xl:grid-cols-[280px_minmax(500px,1fr)_330px] gap-4 mt-4">
-      <!-- Left metrics -->
+    <section class="grid grid-cols-1 xl:grid-cols-[280px_minmax(500px,1fr)_330px] gap-4">
+      
+      <!-- Left Metrics -->
       <aside class="glass rounded-2xl p-4 order-2 xl:order-1">
         <div class="flex items-center justify-between mb-5">
           <div>
@@ -112,7 +106,7 @@
         <div class="space-y-2">
           <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
             <p class="text-[10px] uppercase tracking-widest text-slate-500">Location</p>
-            <p id="location" class="mt-1 text-sm text-white">Loading...</p>
+            <p id="location" class="mt-1 text-sm text-white font-bold">Awaiting Data...</p>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -122,7 +116,7 @@
             </div>
             <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
               <p class="text-[10px] uppercase tracking-widest text-slate-500">Temp</p>
-              <p class="mt-1 text-xl font-semibold metric-value text-white"><span id="temp">--</span>°C</p>
+              <p class="mt-1 text-xl font-semibold text-white"><span id="temp">--</span>°C</p>
             </div>
           </div>
 
@@ -132,8 +126,9 @@
           </div>
 
           <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
-            <div class="flex justify-between"><span class="text-xs text-slate-500">Humidity</span><span id="humidity" class="text-sm text-white">--%</span></div>
+            <div class="flex justify-between"><span class="text-xs text-slate-500">Humidity / Pressure</span><span id="humidity" class="text-sm text-white">--%</span></div>
             <div class="h-1.5 rounded-full bg-slate-800 mt-3 overflow-hidden"><div id="humidityBar" class="h-full bg-neon rounded-full" style="width:0%"></div></div>
+            <p id="pressure" class="text-[10px] text-slate-500 mt-2 text-right">-- hPa</p>
           </div>
 
           <div class="rounded-xl bg-white/[.025] border border-white/5 p-3">
@@ -144,20 +139,15 @@
 
         <div class="mt-4 p-3 rounded-xl border border-neon/10 bg-neon/[.035]">
           <p class="text-[10px] uppercase tracking-widest text-slate-500">System status</p>
-          <p id="systemStatus" class="mt-1 text-sm text-neon">● Radar network synchronized</p>
+          <p id="systemStatus" class="mt-1 text-sm text-neon">● Connecting to API...</p>
         </div>
       </aside>
 
-      <!-- Globe -->
+      <!-- Three.js Globe Section -->
       <section id="globeWrap" class="glass rounded-2xl relative overflow-hidden order-1 xl:order-2">
         <div class="absolute z-10 left-5 top-5 pointer-events-none">
           <p class="text-[10px] uppercase tracking-[.3em] text-cyan/70">Orbital Weather Scan</p>
-          <p class="text-xs text-slate-500 mt-1">Drag to rotate • scroll to zoom • click anomaly</p>
-        </div>
-
-        <div class="absolute z-10 right-5 top-5 flex gap-2 pointer-events-none">
-          <span class="px-2.5 py-1 rounded-full text-[10px] bg-red-400/10 border border-red-400/20 text-red-300">● Critical</span>
-          <span class="px-2.5 py-1 rounded-full text-[10px] bg-yellow-300/10 border border-yellow-300/20 text-yellow-200">● Elevated</span>
+          <p class="text-xs text-slate-500 mt-1">Drag to rotate • Scroll to zoom • Click anomaly</p>
         </div>
 
         <div id="globe"></div>
@@ -168,44 +158,43 @@
             <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-neon pulse-dot"></span><span class="text-xs text-neon">ACTIVE</span></div>
           </div>
           <div class="text-right">
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Tracked anomalies</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Tracked Anomalies</p>
             <p id="stormCount" class="text-lg font-semibold text-white">0</p>
           </div>
         </div>
       </section>
 
-      <!-- Right action/chart -->
+      <!-- Right Action & Chart -->
       <aside class="glass rounded-2xl p-4 order-3">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs text-slate-500 uppercase tracking-widest">Operator tools</p>
             <h2 class="text-lg font-medium text-white mt-1">Storm Monitor</h2>
           </div>
-          <span class="text-xs text-cyan">AUTO</span>
         </div>
 
         <button id="correctBtn" class="w-full mt-5 rounded-xl border border-neon/25 bg-neon/10 text-neon py-3 text-sm hover:bg-neon/15 transition">✏️ Correct Data</button>
 
         <div class="mt-5">
           <div class="flex justify-between items-center mb-3">
-            <h3 class="text-sm text-white">Storm Intensity Timeline</h3>
+            <h3 class="text-sm text-white">Intensity Timeline</h3>
             <span class="text-[10px] text-slate-500">LIVE</span>
           </div>
-          <div class="h-56"><canvas id="stormChart"></canvas></div>
+          <div class="h-48"><canvas id="stormChart"></canvas></div>
         </div>
 
         <div class="mt-5 space-y-2">
-          <div class="flex justify-between text-xs"><span class="text-slate-500">Current risk</span><span id="overviewRisk" class="text-white">--</span></div>
-          <div class="flex justify-between text-xs"><span class="text-slate-500">Rain chance</span><span id="overviewRain" class="text-yellow-200">--%</span></div>
-          <div class="flex justify-between text-xs"><span class="text-slate-500">Data freshness</span><span class="text-neon">Live API Sync</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Weather Status</span><span id="overviewStatus" class="text-white font-semibold">--</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Current risk</span><span id="overviewRisk" class="text-white font-bold">--</span></div>
+          <div class="flex justify-between text-xs"><span class="text-slate-500">Rain chance</span><span id="overviewRain" class="text-yellow-200 font-bold">--%</span></div>
         </div>
       </aside>
     </section>
   </main>
 
-  <!-- Anomaly modal -->
+  <!-- Anomaly Modal -->
   <div id="modal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
-    <div class="glass rounded-2xl w-full max-w-md p-5 border-cyan/20">
+    <div class="glass rounded-2xl w-full max-w-md p-5 border border-cyan/20">
       <div class="flex items-start justify-between">
         <div>
           <p class="text-[10px] uppercase tracking-[.25em] text-cyan">Anomaly detail</p>
@@ -214,26 +203,29 @@
         <button id="closeModal" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
       </div>
       <div class="grid grid-cols-2 gap-2 mt-5">
-        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Risk Level</p><p id="modalRisk" class="mt-1 text-red-300">Critical</p></div>
-        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Weather Status</p><p id="modalStatus" class="mt-1 text-white">Severe Thunderstorm</p></div>
-        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Rain Chance</p><p id="modalRain" class="mt-1 text-yellow-200">82%</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Risk Level</p><p id="modalRisk" class="mt-1 font-bold">--</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Weather Status</p><p id="modalStatus" class="mt-1 text-white">--</p></div>
+        <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Rain Chance</p><p id="modalRain" class="mt-1 text-yellow-200">--</p></div>
         <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Coordinates</p><p id="modalCoords" class="mt-1 text-cyan">--</p></div>
       </div>
     </div>
   </div>
 
-  <!-- Correction modal -->
+  <!-- Correction Modal -->
   <div id="editModal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
-    <div class="glass rounded-2xl w-full max-w-md p-5">
-      <div class="flex justify-between items-center">
-        <div><p class="text-[10px] uppercase tracking-[.25em] text-neon">Manual override</p><h2 class="text-xl font-semibold text-white mt-1">Correct Weather Data</h2></div>
-        <button id="closeEdit" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400">×</button>
+    <div class="glass rounded-2xl w-full max-w-md p-5 border border-cyan/20">
+      <div class="flex justify-between items-center mb-5">
+        <div>
+          <p class="text-[10px] uppercase tracking-[.25em] text-neon">Manual override</p>
+          <h2 class="text-xl font-semibold text-white mt-1">Correct Weather Data</h2>
+        </div>
+        <button id="closeEdit" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
       </div>
       
-      <label class="block text-xs text-slate-500 mt-5 mb-2">Weather status</label>
-      <input id="statusInput" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white" placeholder="e.g. Thunderstorm, Clear" />
+      <label class="block text-xs text-slate-500 mb-2">Weather status (e.g. Clear, Storm)</label>
+      <input id="statusInput" type="text" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white mb-4" />
       
-      <div class="grid grid-cols-2 gap-4 mt-4">
+      <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs text-slate-500 mb-2">Temp (°C)</label>
           <input id="tempInput" type="number" class="w-full bg-black/30 border border-slate-700 rounded-xl px-3 py-3 text-sm outline-none focus:border-neon/50 text-white" />
@@ -244,7 +236,7 @@
         </div>
       </div>
       
-      <button id="saveEdit" class="w-full mt-5 rounded-xl bg-neon/10 border border-neon/25 text-neon py-3 text-sm hover:bg-neon/20 transition">Transmit Override</button>
+      <button id="saveEdit" class="w-full mt-6 rounded-xl bg-neon/10 border border-neon/25 text-neon py-3 text-sm hover:bg-neon/20 transition">Transmit Override</button>
     </div>
   </div>
 
@@ -253,7 +245,7 @@
   let currentLat = null;
   let currentLon = null;
 
-  // ---------------- Three.js Globe Setup ----------------
+  // --- Three.js Globe Setup ---
   const globeEl = document.getElementById("globe");
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
@@ -268,7 +260,7 @@
   controls.enableDamping = true;
   controls.enablePan = false;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.45;
+  controls.autoRotateSpeed = 0.8;
   controls.minDistance = 2.35;
   controls.maxDistance = 4.2;
 
@@ -283,37 +275,24 @@
 
   const surface = new THREE.Mesh(
     new THREE.SphereGeometry(1.22, 64, 64),
-    new THREE.MeshBasicMaterial({ color: 0x07111c, transparent: true, opacity: 0.7 })
+    new THREE.MeshBasicMaterial({ color: 0x07111c, transparent: true, opacity: 0.8 })
   );
   globeGroup.add(surface);
 
-  const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(1.33, 64, 64),
-    new THREE.MeshBasicMaterial({ color: 0x4cd7f6, transparent: true, opacity: 0.035, side: THREE.BackSide })
-  );
-  globeGroup.add(atmosphere);
-
   const sweep = new THREE.Mesh(
     new THREE.ConeGeometry(1.45, 0.06, 64, 1, true, 0, Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.13, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
   );
   sweep.rotation.x = Math.PI / 2;
   globeGroup.add(sweep);
 
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(1.275, 0.006, 8, 128),
-    new THREE.MeshBasicMaterial({ color: 0x4edea3, transparent: true, opacity: 0.25 })
-  );
-  ring.rotation.x = Math.PI / 2;
-  globeGroup.add(ring);
-
-  // Helper arrays for managing dynamic blips
+  // --- Raycaster Setup for Clicking Storms ---
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   const raycastTargets = [];
   const sceneMeshes = [];
 
-  function latLonToVector3(lat, lon, radius=1.29) {
+  function latLonToVector3(lat, lon, radius=1.26) {
     const phi = (90 - lat) * Math.PI / 180;
     const theta = (lon + 180) * Math.PI / 180;
     return new THREE.Vector3(
@@ -329,52 +308,44 @@
     raycastTargets.length = 0;
   }
 
-  function addStormBlip(lat, lon, risk, name, status, rain) {
+  function addStormBlip(lat, lon, risk, name = "Storm Cell", status = "Active Anomaly", rain = "--") {
     const pos = latLonToVector3(lat, lon);
     const color = risk === 'CRITICAL' ? 0xff4d6d : (risk === 'ELEVATED' ? 0xffd84d : 0x4edea3);
     
     const blip = new THREE.Mesh(
-      new THREE.SphereGeometry(risk === 'CRITICAL' ? 0.045 : 0.038, 20, 20),
+      new THREE.SphereGeometry(0.04, 20, 20),
       new THREE.MeshBasicMaterial({ color: color })
     );
     blip.position.copy(pos);
-    blip.userData = { name, risk, status, rain, lat, lon, color: risk === 'CRITICAL' ? 'text-red-300' : 'text-yellow-200' };
+    blip.userData = { name, risk, status, rain, lat, lon }; // Store data for the click event
     
     globeGroup.add(blip);
-    raycastTargets.push(blip);
     sceneMeshes.push(blip);
+    raycastTargets.push(blip); // Make it clickable
 
     const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(risk === 'CRITICAL' ? 0.095 : 0.075, 20, 20),
-      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.12 })
+      new THREE.SphereGeometry(0.09, 20, 20),
+      new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.3 })
     );
     glow.position.copy(pos);
     globeGroup.add(glow);
     sceneMeshes.push(glow);
   }
 
-  // Pre-load global anomalies to keep the globe interesting
-  const globalStorms = [
-    {name:"Bay of Bengal Cell", lat:18.2, lon:89.0, risk:"CRITICAL", status:"Severe Thunderstorm", rain:92},
-    {name:"Central America Line", lat:14.2, lon:-88.1, risk:"ELEVATED", status:"Convective Rain", rain:75}
-  ];
-
-  function renderGlobeData(activeData) {
+  function renderGlobeData(data) {
     clearStorms();
     let count = 0;
     
-    // Render static background storms
-    globalStorms.forEach(s => {
-      addStormBlip(s.lat, s.lon, s.risk, s.name, s.status, s.rain);
-      count++;
-    });
+    // Static demo storms to keep globe interesting
+    addStormBlip(18.2, 89.0, 'CRITICAL', 'Bay of Bengal Cell', 'Severe Thunderstorm', 92);
+    addStormBlip(14.2, -88.1, 'ELEVATED', 'Central America Line', 'Convective Rain', 75);
+    count += 2;
 
-    // Plot user's searched/GPS location if it has a storm
-    if (activeData && activeData.risk !== 'LOW' && currentLat && currentLon) {
-       addStormBlip(currentLat, currentLon, activeData.risk, activeData.location, activeData.status, activeData.rain_chance);
+    // Render real-time user searched storm
+    if (data && data.risk !== 'LOW' && data.location !== 'Offline/Error') {
+       addStormBlip(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
        count++;
     }
-
     document.getElementById("stormCount").textContent = count;
   }
 
@@ -389,22 +360,25 @@
 
   function animate() {
     requestAnimationFrame(animate);
-    sweep.rotation.z += 0.009;
+    sweep.rotation.z += 0.01;
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
 
+  // Raycaster Click Event Listener
   renderer.domElement.addEventListener("click", (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(raycastTargets);
-    if (hits.length) openStorm(hits[0].object.userData);
+    if (hits.length) {
+      openStorm(hits[0].object.userData);
+    }
   });
 
-  // ---------------- UI & Chart Setup ----------------
+  // --- Chart Setup ---
   const mainChart = new Chart(document.getElementById("stormChart").getContext('2d'), {
     type: "line",
     data: {
@@ -415,8 +389,7 @@
         backgroundColor: "rgba(76,215,246,.08)",
         fill: true,
         tension: .42,
-        pointRadius: 2.5,
-        pointBackgroundColor: "#4edea3",
+        pointRadius: 2,
         borderWidth: 2
       }]
     },
@@ -425,13 +398,13 @@
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { display: false }, ticks: { color: "#64748b", font: {size: 9}, autoSkip: true, maxTicksLimit: 6 } },
+        x: { grid: { display: false }, ticks: { color: "#64748b", font: {size: 9} } },
         y: { beginAtZero: true, max: 120, grid: { color: "rgba(148,163,184,.06)" }, ticks: { color: "#64748b", font: {size: 9} } }
       }
     }
   });
 
-  // ---------------- API Integration ----------------
+  // --- API & Data Logic ---
   async function updateData() {
     try {
       let url = '/data';
@@ -444,66 +417,78 @@
       if (params.toString()) url += '?' + params.toString();
 
       const res = await fetch(url);
+      
+      if (!res.ok) throw new Error("API Error");
       const data = await res.json();
 
-      if (data.error) {
+      if (data.error || data.location === "Offline/Error") {
         document.getElementById("location").textContent = "Location Not Found";
-        document.getElementById("systemStatus").textContent = "● Target acquisition failed";
+        document.getElementById("systemStatus").textContent = "● API Fetch Failed (Check Backend)";
+        document.getElementById("systemStatus").className = "mt-1 text-sm text-red-400";
         return;
       }
 
-      // Populate DOM elements
+      // Update UI Text
       document.getElementById("location").textContent = data.location;
       document.getElementById("temp").textContent = data.temp;
-      document.getElementById("wind").textContent = data.wind + " km/h";
+      document.getElementById("wind").textContent = data.wind;
       document.getElementById("humidity").textContent = data.humidity + "%";
+      document.getElementById("pressure").textContent = data.pressure + " hPa";
       document.getElementById("cape").textContent = data.cape + " J/kg";
+      
+      document.getElementById("overviewStatus").textContent = data.status;
       document.getElementById("overviewRisk").textContent = data.risk;
       document.getElementById("overviewRain").textContent = data.rain_chance + "%";
       
-      document.getElementById("overviewRisk").className = data.risk === 'CRITICAL' ? 'text-red-300' : (data.risk === 'ELEVATED' ? 'text-yellow-200' : 'text-neon');
+      // Update Colors based on Risk
+      let riskColor = data.risk === 'CRITICAL' ? 'text-red-400' : (data.risk === 'ELEVATED' ? 'text-yellow-300' : 'text-neon');
+      document.getElementById(overviewRisk").className = `font-bold ${riskColor}`;
 
-      // Update progress bars
+      // Progress Bars
       document.getElementById("windBar").style.width = Math.min(data.wind * 2, 100) + "%";
-      document.getElementById("humidityBar").style.width = data.humidity + "%";
-      document.getElementById("capeBar").style.width = Math.min(data.cape / 30, 100) + "%";
+      document.getElementById("humidityBar").style.width = (data.humidity || 0) + "%";
+      document.getElementById("capeBar").style.width = Math.min((data.cape || 0) / 30, 100) + "%";
       
       // Update Time
       let now = new Date();
-      document.getElementById("localTime").textContent = now.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit' }) + " " + (data.timezone_abbr || '');
-      document.getElementById("systemStatus").textContent = "● Target Acquired: " + data.status;
+      document.getElementById("localTime").textContent = now.toLocaleTimeString([], { timeZone: data.timezone || 'UTC', hour: '2-digit', minute: '2-digit' }) + " " + (data.timezone_abbr || '');
+      document.getElementById("systemStatus").textContent = "● Live Data Synced";
+      document.getElementById("systemStatus").className = "mt-1 text-sm text-neon";
 
-      // Update Chart
-      mainChart.data.labels = data.labels.map(ts => {
-          let date = new Date(ts * 1000);
-          return date.toLocaleTimeString([], { timeZone: data.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      });
-      mainChart.data.datasets[0].data = data.values;
-      mainChart.update();
+      // Chart Update
+      if(data.labels && data.values) {
+          mainChart.data.labels = data.labels.map(ts => {
+              let date = new Date(ts * 1000);
+              return date.toLocaleTimeString([], { timeZone: data.timezone || 'UTC', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+          });
+          mainChart.data.datasets[0].data = data.values;
+          mainChart.update();
+      }
 
-      // Plot active data on the 3D globe
+      // Render Globe Data
       renderGlobeData(data);
 
     } catch (e) {
       console.error("Telemetry API Error:", e);
-      document.getElementById("systemStatus").textContent = "● Telemetry Sync Failed";
+      document.getElementById("systemStatus").textContent = "● Cannot connect to Python Server";
+      document.getElementById("systemStatus").className = "mt-1 text-sm text-red-400";
     }
   }
 
-  // Input Handlers
+  // --- Controls ---
   document.getElementById("searchBtn").onclick = () => {
     currentCity = document.getElementById("cityInput").value.trim();
     currentLat = null;
     currentLon = null;
     updateData();
   };
-
+  
   document.getElementById("cityInput").addEventListener("keydown", e => { 
     if (e.key === "Enter") document.getElementById("searchBtn").click(); 
   });
 
   document.getElementById("gpsBtn").onclick = () => {
-    if (!navigator.geolocation) return alert("Geolocation is not supported by this browser.");
+    if (!navigator.geolocation) return alert("Geolocation not supported.");
     navigator.geolocation.getCurrentPosition(
       p => {
         currentLat = p.coords.latitude;
@@ -516,14 +501,13 @@
     );
   };
 
-  // ---------------- Modal Handlers ----------------
+  // --- Modal Logic ---
   const modal = document.getElementById("modal");
-  const editModal = document.getElementById("editModal");
-
+  
   function openStorm(s) {
     document.getElementById("modalTitle").textContent = s.name;
     document.getElementById("modalRisk").textContent = s.risk;
-    document.getElementById("modalRisk").className = "mt-1 " + (s.color || 'text-white');
+    document.getElementById("modalRisk").className = "mt-1 font-bold " + (s.risk === 'CRITICAL' ? 'text-red-400' : 'text-yellow-300');
     document.getElementById("modalStatus").textContent = s.status;
     document.getElementById("modalRain").textContent = s.rain + "%";
     document.getElementById("modalCoords").textContent = `${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°`;
@@ -535,13 +519,10 @@
   document.getElementById("closeModal").onclick = closeStorm;
   modal.addEventListener("click", e => { if (e.target === modal) closeStorm(); });
 
-  // Manual Override Form Handler
+  const editModal = document.getElementById("editModal");
   document.getElementById("correctBtn").onclick = () => {
     let loc = document.getElementById('location').textContent;
-    if (loc === "Loading..." || loc === "Location Not Found") return alert("Awaiting valid location telemetry.");
-    document.getElementById("statusInput").value = "";
-    document.getElementById("tempInput").value = "";
-    document.getElementById("rainInput").value = "";
+    if (loc === "Loading..." || loc === "Location Not Found" || loc === "Awaiting Data...") return alert("Awaiting valid location telemetry.");
     editModal.classList.remove("hidden"); 
     editModal.classList.add("flex");
   };
@@ -566,18 +547,17 @@
         });
         editModal.classList.add("hidden");
         editModal.classList.remove("flex");
-        updateData(); // Refresh API data
+        updateData(); 
       } catch (e) {
-        alert("Failed to transmit override data.");
+        alert("Failed to transmit override data. Ensure backend is running.");
       }
     }
   };
 
-  // Initialization
-  renderGlobeData(null); // Plot static global anomalies on startup
+  // Init
+  renderGlobeData(null); 
   setInterval(updateData, 5000);
   updateData();
-
 </script>
 </body>
 </html>
