@@ -151,7 +151,7 @@
 
         <div class="absolute bottom-5 left-5 right-5 flex justify-between items-end pointer-events-none">
           <div>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Radar sweep</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Global Scan</p>
             <div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full bg-neon pulse-dot"></span><span class="text-xs text-neon">ACTIVE</span></div>
           </div>
           <div class="text-right">
@@ -245,7 +245,6 @@
   const globeEl = document.getElementById(`globe`);
   const scene = new THREE.Scene();
   
-  // Camera Adjusted for smaller globe
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 0, 2.8); 
 
@@ -262,17 +261,17 @@
   controls.minDistance = 1.5; 
   controls.maxDistance = 4.0;
 
-  // Lighting for realistic Earth
+  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
   scene.add(ambientLight);
   const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
   sunLight.position.set(5, 3, 5);
   scene.add(sunLight);
 
-  // Add subtle stars background
+  // Stars background
   const starGeo = new THREE.BufferGeometry();
   const starPoints = [];
-  for(let i=0; i<300; i++) {
+  for(let i = 0; i < 300; i++) {
     starPoints.push((Math.random() - 0.5) * 10);
     starPoints.push((Math.random() - 0.5) * 10);
     starPoints.push((Math.random() - 0.5) * 10 - 2);
@@ -285,12 +284,11 @@
   const globeGroup = new THREE.Group();
   scene.add(globeGroup);
 
-  // Texture Loader for Earth
+  // Earth Texture
   const textureLoader = new THREE.TextureLoader();
   const earthMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg`);
   const bumpMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-topology.png`);
 
-  // Realistic Earth Mesh (Smaller Size: radius 1.0)
   const earthRadius = 1.0;
   const earthGeometry = new THREE.SphereGeometry(earthRadius, 64, 64);
   const earthMaterial = new THREE.MeshStandardMaterial({
@@ -324,45 +322,64 @@
     raycastTargets.length = 0;
   }
 
-  // --- Procedural 3D Cloud Generator for Storms ---
+  // --- Volumetric Clouds Logic ---
+  function createCloudTexture() {
+    const canvas = document.createElement(`canvas`);
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext(`2d`);
+    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gradient.addColorStop(0, `rgba(255, 255, 255, 1)`);
+    gradient.addColorStop(0.4, `rgba(255, 255, 255, 0.6)`);
+    gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(canvas);
+  }
+  const cloudTexture = createCloudTexture();
+
   function addStormCloud(lat, lon, risk, name = `Storm Cell`, status = `Active Anomaly`, rain = `--`) {
-    const pos = latLonToVector3(lat, lon, earthRadius + 0.02); // Just above surface
+    const pos = latLonToVector3(lat, lon, earthRadius + 0.03); 
     const cloudGroup = new THREE.Group();
     cloudGroup.position.copy(pos);
     
-    // Determine cloud color based on risk
-    // Critical = Dark stormy clouds, Elevated = Grayish rain clouds
-    const cloudColor = risk === `CRITICAL` ? 0x222222 : 0xaaaaaa;
+    const cloudColor = risk === `CRITICAL` ? 0x333333 : 0xdddddd;
     
-    const cloudMaterial = new THREE.MeshLambertMaterial({ 
+    const cloudMaterial = new THREE.SpriteMaterial({ 
+      map: cloudTexture, 
       color: cloudColor, 
       transparent: true, 
-      opacity: 0.9 
+      opacity: 0.85,
+      depthWrite: false
     });
 
-    // Create a cluster of puffy spheres to look like a cloud
-    for(let i=0; i<6; i++) {
-      const puf = new THREE.Mesh(new THREE.SphereGeometry(0.015 + Math.random() * 0.02, 12, 12), cloudMaterial);
-      puf.position.set(
+    for(let i = 0; i < 6; i++) {
+      const sprite = new THREE.Sprite(cloudMaterial);
+      let size = 0.07 + Math.random() * 0.05;
+      sprite.scale.set(size, size, size);
+      sprite.position.set(
         (Math.random() - 0.5) * 0.06,
-        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.03,
         (Math.random() - 0.5) * 0.06
       );
-      cloudGroup.add(puf);
+      cloudGroup.add(sprite);
     }
 
-    // Add Red lightning glow if it's a critical storm
     if(risk === `CRITICAL`) {
-      const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.03, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0xff4d6d, transparent: true, opacity: 0.6 })
-      );
-      cloudGroup.add(glow);
+      const glowMaterial = new THREE.SpriteMaterial({
+        map: cloudTexture,
+        color: 0xff4d6d,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending 
+      });
+      const glowSprite = new THREE.Sprite(glowMaterial);
+      glowSprite.scale.set(0.14, 0.14, 0.14);
+      cloudGroup.add(glowSprite);
     }
 
-    // Invisible Hitbox for clicking
     const hitbox = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08, 16, 16),
+      new THREE.SphereGeometry(0.06, 16, 16),
       new THREE.MeshBasicMaterial({ visible: false })
     );
     hitbox.position.copy(pos);
@@ -379,7 +396,6 @@
     clearStorms();
     let count = 0;
     
-    // Background demo storms (Dark cloud over Bay of Bengal, Gray cloud over America)
     addStormCloud(18.2, 89.0, `CRITICAL`, `Bay of Bengal Cell`, `Severe Thunderstorm`, 92);
     addStormCloud(14.2, -88.1, `ELEVATED`, `Central America Line`, `Convective Rain`, 75);
     count += 2;
@@ -400,6 +416,12 @@
   window.addEventListener(`resize`, resize);
   resize();
 
+  // Animation Loop added back!
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
   animate();
 
   renderer.domElement.addEventListener(`click`, (event) => {
