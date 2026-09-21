@@ -1,7 +1,6 @@
 {
   "rewrites": [
     { "source": "/data", "destination": "/api/index" },
-    { "source": "/override", "destination": "/api/index" },
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/override", "destination": "/api/index" }
   ]
 }
