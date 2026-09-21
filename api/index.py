@@ -1,5 +1,10 @@
-from flask import Flask, jsonify, request
 import os
+import sys
+# Vercel-কে বলে দেওয়া হচ্ছে যেন সে 'api' ফোল্ডারের ভেতরের ফাইলগুলোকেও চিনে নেয়
+sys.path.append(os.path.dirname(__file__))
+
+# ... আপনার বাকি কোড যেমন ছিল তেমনই থাকবে ...
+from flask import Flask, jsonify, request
 import time
 from sensor_simulator import get_real_storm_data
 
