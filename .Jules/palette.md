@@ -1,0 +1,3 @@
+## 2024-11-20 - [ARIA Labels on Icon-Only Buttons and Forms]
+**Learning:** Icon-only buttons (like modal close "x" marks) and decorative icons inside input groups are frequently missed during initial implementation, creating severe accessibility barriers. Screen readers may read raw characters (like "times" for "×") or nothing at all if a button lacks text content or an `aria-label`. Similarly, decorative icons within inputs should have `aria-hidden="true"` to prevent screen reader noise.
+**Action:** Always ensure that icon-only buttons include descriptive `aria-label`s and that decorative elements in forms are explicitly hidden from screen readers. Combine this with strong keyboard focus styles (`focus-visible`) for fully accessible interaction.

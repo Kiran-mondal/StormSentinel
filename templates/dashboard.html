@@ -81,13 +81,13 @@
       </div>
 
       <div class="flex-1 w-full lg:max-w-2xl relative">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
-        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city or location..." />
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true">⌕</span>
+        <input id="cityInput" aria-label="Search city or location" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city or location..." />
       </div>
 
       <div class="flex gap-2 w-full lg:w-auto">
-        <button id="searchBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-cyan/10 border border-cyan/25 text-cyan text-sm hover:bg-cyan/15 transition">Search</button>
-        <button id="gpsBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-neon/10 border border-neon/25 text-neon text-sm hover:bg-neon/15 transition">📍 GPS</button>
+        <button id="searchBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-cyan/10 border border-cyan/25 text-cyan text-sm hover:bg-cyan/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">Search</button>
+        <button id="gpsBtn" class="flex-1 lg:flex-none px-4 py-2.5 rounded-xl bg-neon/10 border border-neon/25 text-neon text-sm hover:bg-neon/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon/50">📍 GPS</button>
       </div>
     </header>
 
@@ -169,7 +169,7 @@
           </div>
         </div>
 
-        <button id="correctBtn" class="w-full mt-5 rounded-xl border border-neon/25 bg-neon/10 text-neon py-3 text-sm hover:bg-neon/15 transition">✏️ Correct Data</button>
+        <button id="correctBtn" class="w-full mt-5 rounded-xl border border-neon/25 bg-neon/10 text-neon py-3 text-sm hover:bg-neon/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon/50">✏️ Correct Data</button>
 
         <div class="mt-5">
           <div class="flex justify-between items-center mb-3">
@@ -196,7 +196,7 @@
           <p class="text-[10px] uppercase tracking-[.25em] text-cyan">Weather Anomaly</p>
           <h2 id="modalTitle" class="text-xl font-semibold text-white mt-1">Storm Cell</h2>
         </div>
-        <button id="closeModal" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
+        <button id="closeModal" aria-label="Close anomaly details" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">×</button>
       </div>
       <div class="grid grid-cols-2 gap-2 mt-5">
         <div class="rounded-xl bg-white/[.025] border border-white/5 p-3"><p class="text-[10px] text-slate-500">Risk Level</p><p id="modalRisk" class="mt-1 font-bold">--</p></div>
@@ -215,7 +215,7 @@
           <p class="text-[10px] uppercase tracking-[.25em] text-neon">Manual override</p>
           <h2 class="text-xl font-semibold text-white mt-1">Correct Weather Data</h2>
         </div>
-        <button id="closeEdit" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white">×</button>
+        <button id="closeEdit" aria-label="Close correction form" class="w-8 h-8 rounded-lg bg-white/5 text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">×</button>
       </div>
       
       <label class="block text-xs text-slate-500 mb-2">Weather status (e.g. Clear, Storm)</label>
@@ -232,7 +232,7 @@
         </div>
       </div>
       
-      <button id="saveEdit" class="w-full mt-6 rounded-xl bg-neon/10 border border-neon/25 text-neon py-3 text-sm hover:bg-neon/20 transition">Transmit Override</button>
+      <button id="saveEdit" class="w-full mt-6 rounded-xl bg-neon/10 border border-neon/25 text-neon py-3 text-sm hover:bg-neon/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon/50">Transmit Override</button>
     </div>
   </div>
 
