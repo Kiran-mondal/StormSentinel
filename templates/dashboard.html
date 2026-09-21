@@ -26,8 +26,10 @@
     }
   </script>
 
+  <!-- Three.js, Chart.js এবং নতুন GSAP অ্যানিমেশন লাইব্রেরি -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -57,7 +59,7 @@
       mask-image: linear-gradient(to bottom, black, transparent 88%);
     }
     #globeWrap { min-height: 560px; }
-    #globe { position:absolute; inset:0; width:100%; height:100%; }
+    #globe { position:absolute; inset:0; width:100%; height:100%; outline: none; }
     .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
     @keyframes pulse {
       0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,.35); }
@@ -256,34 +258,32 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.enablePan = false;
-  controls.autoRotate = false; // ক্যামেরা ঘোরা বন্ধ করা হলো
+  controls.autoRotate = true; // রাজকীয় ঘূর্ণনের জন্য এটি চালু করা হলো
+  controls.autoRotateSpeed = 0.4;
   controls.minDistance = 1.5; 
   controls.maxDistance = 4.0;
 
-  // বাস্তবসম্মত দিন-রাতের আলো (সূর্য এক জায়গায় স্থির থাকবে)
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
   scene.add(ambientLight);
   const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
   sunLight.position.set(5, 2, 3);
   scene.add(sunLight);
 
-  // Stars background
   const starGeo = new THREE.BufferGeometry();
   const starPoints = [];
-  for(let i = 0; i < 300; i++) {
-    starPoints.push((Math.random() - 0.5) * 10);
-    starPoints.push((Math.random() - 0.5) * 10);
-    starPoints.push((Math.random() - 0.5) * 10 - 2);
+  for(let i = 0; i < 400; i++) {
+    starPoints.push((Math.random() - 0.5) * 12);
+    starPoints.push((Math.random() - 0.5) * 12);
+    starPoints.push((Math.random() - 0.5) * 12 - 2);
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPoints, 3));
-  const starMat = new THREE.PointsMaterial({color: 0x888888, size: 0.01});
+  const starMat = new THREE.PointsMaterial({color: 0x999999, size: 0.015, transparent: true, opacity: 0.8});
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
   const globeGroup = new THREE.Group();
   scene.add(globeGroup);
 
-  // Earth Texture
   const textureLoader = new THREE.TextureLoader();
   const earthMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg`);
   const bumpMap = textureLoader.load(`https://unpkg.com/three-globe/example/img/earth-topology.png`);
@@ -294,11 +294,23 @@
     map: earthMap,
     bumpMap: bumpMap,
     bumpScale: 0.015,
-    roughness: 0.6,
-    metalness: 0.1
+    roughness: 0.7,
+    metalness: 0.05
   });
   const earth = new THREE.Mesh(earthGeometry, earthMaterial);
   globeGroup.add(earth);
+
+  // --- NEW: Atmospheric Glow (Halo Effect) ---
+  const atmosphereGeom = new THREE.SphereGeometry(earthRadius * 1.05, 64, 64);
+  const atmosphereMat = new THREE.MeshBasicMaterial({
+    color: 0x4cd7f6,
+    transparent: true,
+    opacity: 0.12,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending
+  });
+  const atmosphere = new THREE.Mesh(atmosphereGeom, atmosphereMat);
+  globeGroup.add(atmosphere);
 
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
@@ -315,13 +327,36 @@
     );
   }
 
+  // --- NEW: GSAP Cinematic Fly-to Animation ---
+  function flyToLocation(lat, lon) {
+    controls.autoRotate = false; // সাময়িকভাবে ঘোরা বন্ধ
+    
+    // বর্তমান ক্যামেরার দূরত্ব মাপা
+    const currentDist = camera.position.length();
+    // টার্গেট পয়েন্ট বের করা
+    const targetPos = latLonToVector3(lat, lon, currentDist);
+    
+    gsap.to(camera.position, {
+      x: targetPos.x,
+      y: targetPos.y,
+      z: targetPos.z,
+      duration: 1.8, // 1.8 সেকেন্ড ধরে উড়ে যাবে
+      ease: "power3.inOut",
+      onUpdate: () => controls.update(),
+      onComplete: () => {
+        // ৩ সেকেন্ড পর আবার ধীরে ধীরে ঘোরা শুরু করবে
+        setTimeout(() => { controls.autoRotate = true; }, 3000);
+      }
+    });
+  }
+
   function clearStorms() {
     sceneMeshes.forEach(m => globeGroup.remove(m));
     sceneMeshes.length = 0;
     raycastTargets.length = 0;
   }
 
-  // --- Volumetric Clouds Logic ---
+  // --- Volumetric Clouds ---
   function createCloudTexture() {
     const canvas = document.createElement(`canvas`);
     canvas.width = 128;
@@ -342,19 +377,19 @@
     const cloudGroup = new THREE.Group();
     cloudGroup.position.copy(pos);
     
-    const cloudColor = risk === `CRITICAL` ? 0x333333 : 0xdddddd;
+    const cloudColor = risk === `CRITICAL` ? 0x222222 : 0xdddddd;
     
     const cloudMaterial = new THREE.SpriteMaterial({ 
       map: cloudTexture, 
       color: cloudColor, 
       transparent: true, 
-      opacity: 0.85,
+      opacity: 0.9,
       depthWrite: false
     });
 
-    for(let i = 0; i < 6; i++) {
+    for(let i = 0; i < 7; i++) {
       const sprite = new THREE.Sprite(cloudMaterial);
-      let size = 0.07 + Math.random() * 0.05;
+      let size = 0.08 + Math.random() * 0.06;
       sprite.scale.set(size, size, size);
       sprite.position.set(
         (Math.random() - 0.5) * 0.06,
@@ -369,11 +404,11 @@
         map: cloudTexture,
         color: 0xff4d6d,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.7,
         blending: THREE.AdditiveBlending 
       });
       const glowSprite = new THREE.Sprite(glowMaterial);
-      glowSprite.scale.set(0.14, 0.14, 0.14);
+      glowSprite.scale.set(0.16, 0.16, 0.16);
       cloudGroup.add(glowSprite);
     }
 
@@ -402,19 +437,20 @@
     if (data && data.risk !== `LOW` && data.location !== `Offline/Error`) {
        addStormCloud(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
        count++;
+       // নতুন শহরে সার্চ করলে ক্যামেরা নিজে থেকেই উড়ে যাবে
+       flyToLocation(data.lat || 22.57, data.lon || 88.36);
     }
     document.getElementById(`stormCount`).textContent = count;
   }
 
-  // মোবাইল এবং ডেস্কটপ স্ক্রিনের জন্য রেসপনসিভ ক্যামেরা
   function resize() {
     const r = globeEl.getBoundingClientRect();
     camera.aspect = Math.max(r.width, 1) / Math.max(r.height, 1);
     
     if (r.width < 768) {
-      camera.position.z = 3.8; // মোবাইলের জন্য একটু দূরে
+      camera.position.z= 3.8; 
     } else {
-      camera.position.z = 2.8; // ডেস্কটপের জন্য স্বাভাবিক
+      camera.position.z = 2.8; 
     }
     
     camera.updateProjectionMatrix();
@@ -425,13 +461,11 @@
 
   function animate() {
     requestAnimationFrame(animate);
-    globeGroup.rotation.y += 0.0015; // পৃথিবী নিজের অক্ষে ঘুরবে
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
 
-  // মোবাইল এবং ডেস্কটপ উভয়ের জন্য ক্লিক/টাচ ইভেন্ট
   function handleInteraction(event) {
     const rect = renderer.domElement.getBoundingClientRect();
     let x, y;
@@ -542,7 +576,13 @@
           mainChart.update();
       }
 
-      renderGlobeData(data);
+      // একবারই ক্যামেরা উড়বে প্রথম ডেটা লোডের সময়
+      if (currentCity !== null || (currentLat !== null && currentLon !== null)) {
+         renderGlobeData(data);
+         currentCity = null; currentLat = null; currentLon = null; // রিসেট করা হলো যাতে বারবার ক্যামেরা না উড়ে
+      } else if (document.getElementById(`stormCount`).textContent === "0") {
+         renderGlobeData(data); // প্রথম লোডের জন্য
+      }
 
     } catch (e) {
       console.error(e);
@@ -630,6 +670,8 @@
         });
         editModal.classList.add(`hidden`);
         editModal.classList.remove(`flex`);
+        
+        currentCity = document.getElementById(`cityInput`).value.trim();
         updateData(); 
       } catch (e) {
         alert(`Failed to transmit override data. Ensure backend is running.`);
@@ -637,7 +679,6 @@
     }
   };
 
-  renderGlobeData(null); 
   setInterval(updateData, 5000);
   updateData();
 </script>
