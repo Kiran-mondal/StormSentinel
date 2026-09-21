@@ -84,7 +84,7 @@
 
       <div class="flex-1 w-full lg:max-w-2xl relative">
         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
-        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city or location..." />
+        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city..." />
       </div>
 
       <div class="flex gap-2 w-full lg:w-auto">
@@ -242,8 +242,8 @@
   let currentCity = null;
   let currentLat = null;
   let currentLon = null;
+  let shouldFly = false;
 
-  // --- Three.js Realistic Globe Setup ---
   const globeEl = document.getElementById(`globe`);
   const scene = new THREE.Scene();
   
@@ -256,10 +256,9 @@
   globeEl.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+  controls.enableDamping = true; 
   controls.enablePan = false;
-  controls.autoRotate = true; // রাজকীয় ঘূর্ণনের জন্য এটি চালু করা হলো
-  controls.autoRotateSpeed = 0.4;
+  controls.autoRotate = false;
   controls.minDistance = 1.5; 
   controls.maxDistance = 4.0;
 
@@ -300,7 +299,6 @@
   const earth = new THREE.Mesh(earthGeometry, earthMaterial);
   globeGroup.add(earth);
 
-  // --- NEW: Atmospheric Glow (Halo Effect) ---
   const atmosphereGeom = new THREE.SphereGeometry(earthRadius * 1.05, 64, 64);
   const atmosphereMat = new THREE.MeshBasicMaterial({
     color: 0x4cd7f6,
@@ -327,27 +325,16 @@
     );
   }
 
-  // --- NEW: GSAP Cinematic Fly-to Animation ---
+  let isFlying = false;
+  let flyingLocalPos = null;
+
   function flyToLocation(lat, lon) {
-    controls.autoRotate = false; // সাময়িকভাবে ঘোরা বন্ধ
+    let dist = camera.position.length();
+    if (dist > 3.0) dist = 2.8; 
     
-    // বর্তমান ক্যামেরার দূরত্ব মাপা
-    const currentDist = camera.position.length();
-    // টার্গেট পয়েন্ট বের করা
-    const targetPos = latLonToVector3(lat, lon, currentDist);
-    
-    gsap.to(camera.position, {
-      x: targetPos.x,
-      y: targetPos.y,
-      z: targetPos.z,
-      duration: 1.8, // 1.8 সেকেন্ড ধরে উড়ে যাবে
-      ease: "power3.inOut",
-      onUpdate: () => controls.update(),
-      onComplete: () => {
-        // ৩ সেকেন্ড পর আবার ধীরে ধীরে ঘোরা শুরু করবে
-        setTimeout(() => { controls.autoRotate = true; }, 3000);
-      }
-    });
+    flyingLocalPos = latLonToVector3(lat, lon, dist);
+    isFlying = true;
+    controls.enabled = false;
   }
 
   function clearStorms() {
@@ -356,7 +343,6 @@
     raycastTargets.length = 0;
   }
 
-  // --- Volumetric Clouds ---
   function createCloudTexture() {
     const canvas = document.createElement(`canvas`);
     canvas.width = 128;
@@ -437,8 +423,6 @@
     if (data && data.risk !== `LOW` && data.location !== `Offline/Error`) {
        addStormCloud(data.lat || 22.57, data.lon || 88.36, data.risk, data.location, data.status, data.rain_chance);
        count++;
-       // নতুন শহরে সার্চ করলে ক্যামেরা নিজে থেকেই উড়ে যাবে
-       flyToLocation(data.lat || 22.57, data.lon || 88.36);
     }
     document.getElementById(`stormCount`).textContent = count;
   }
@@ -448,9 +432,9 @@
     camera.aspect = Math.max(r.width, 1) / Math.max(r.height, 1);
     
     if (r.width < 768) {
-      camera.position.z= 3.8; 
+      if(!isFlying) camera.position.z = 3.8; 
     } else {
-      camera.position.z = 2.8; 
+      if(!isFlying) camera.position.z = 2.8; 
     }
     
     camera.updateProjectionMatrix();
@@ -461,7 +445,24 @@
 
   function animate() {
     requestAnimationFrame(animate);
-    controls.update();
+    
+    globeGroup.rotation.y += 0.0012;
+
+    if (isFlying && flyingLocalPos) {
+      const worldPos = flyingLocalPos.clone().applyMatrix4(globeGroup.matrixWorld);
+      camera.position.lerp(worldPos, 0.04);
+      camera.lookAt(0, 0, 0);
+      
+      if (camera.position.distanceTo(worldPos) < 0.05) {
+        isFlying = false;
+        controls.enabled = true;
+      }
+    }
+
+    if (!isFlying) {
+      controls.update();
+    }
+    
     renderer.render(scene, camera);
   }
   animate();
@@ -489,7 +490,6 @@
   renderer.domElement.addEventListener(`click`, handleInteraction);
   renderer.domElement.addEventListener(`touchend`, handleInteraction, {passive: true});
 
-  // --- Chart Setup ---
   const mainChart = new Chart(document.getElementById(`stormChart`).getContext(`2d`), {
     type: `line`,
     data: {
@@ -515,7 +515,6 @@
     }
   });
 
-  // --- API & Data Logic ---
   async function updateData() {
     try {
       let url = `/data`;
@@ -576,13 +575,11 @@
           mainChart.update();
       }
 
-      // একবারই ক্যামেরা উড়বে প্রথম ডেটা লোডের সময়
-      if (currentCity !== null || (currentLat !== null && currentLon !== null)) {
-         renderGlobeData(data);
-         currentCity = null; currentLat = null; currentLon = null; // রিসেট করা হলো যাতে বারবার ক্যামেরা না উড়ে
-      } else if (document.getElementById(`stormCount`).textContent === "0") {
-         renderGlobeData(data); // প্রথম লোডের জন্য
+      if (shouldFly && data.lat && data.lon) {
+         flyToLocation(data.lat, data.lon);
+         shouldFly = false;
       }
+      renderGlobeData(data);
 
     } catch (e) {
       console.error(e);
@@ -595,6 +592,7 @@
     currentCity = document.getElementById(`cityInput`).value.trim();
     currentLat = null;
     currentLon = null;
+    shouldFly = true; 
     updateData();
   };
   
@@ -610,6 +608,7 @@
         currentLon = p.coords.longitude;
         currentCity = null;
         document.getElementById(`cityInput`).value = ``;
+        shouldFly = true; 
         updateData();
       },
       () => alert(`GPS permission denied.`)
@@ -679,6 +678,7 @@
     }
   };
 
+  shouldFly = true;
   setInterval(updateData, 5000);
   updateData();
 </script>
