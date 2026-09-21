@@ -1,6 +1,21 @@
 import requests
+import time
+
+# ⚡ Bolt Optimization: In-memory TTL cache to prevent rate limiting and reduce latency.
+# The frontend polls every 5 seconds, but external API weather data changes slowly.
+_weather_cache = {}
+CACHE_TTL = 60  # Cache duration in seconds
+MAX_CACHE_SIZE = 100 # Prevent unbounded memory growth
 
 def get_real_storm_data(city=None, lat=None, lon=None):
+    cache_key = f"{city}_{lat}_{lon}"
+    current_time = time.time()
+
+    if cache_key in _weather_cache:
+        cached_data, timestamp = _weather_cache[cache_key]
+        if current_time - timestamp < CACHE_TTL:
+            return cached_data.copy()
+
     try:
         location_name = "Unknown"
         
@@ -48,7 +63,7 @@ def get_real_storm_data(city=None, lat=None, lon=None):
         rain_chance = hourly.get("precipitation_probability", [0])[0] if "precipitation_probability" in hourly else 0
         cape_val = hourly.get("cape", [0])[0] if "cape" in hourly else 0
             
-        return {
+        result = {
             "location": location_name,
             "timezone": tz_name,
             "timezone_abbr": tz_abbr,
@@ -62,6 +77,14 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             "risk": risk_level,
             "chart_val": chart_val
         }
+
+        # Enforce max cache size by removing oldest entry
+        if len(_weather_cache) >= MAX_CACHE_SIZE:
+            oldest_key = min(_weather_cache.keys(), key=lambda k: _weather_cache[k][1])
+            del _weather_cache[oldest_key]
+
+        _weather_cache[cache_key] = (result, current_time)
+        return result.copy()
     except Exception as e:
         return {
             "location": "Offline/Error", 
