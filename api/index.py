@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, jsonify, request
 import os
 import time
 from sensor_simulator import get_real_storm_data
@@ -7,9 +7,7 @@ app = Flask(__name__)
 data_log = [] 
 user_corrections = {} 
 
-@app.route("/")
-def index():
-    return render_template("dashboard.html")
+# HTML রেন্ডার করার অংশটি (render_template) পুরোপুরি মুছে ফেলা হয়েছে
 
 @app.route("/override", methods=["POST"])
 def override_data():
