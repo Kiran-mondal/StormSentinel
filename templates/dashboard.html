@@ -26,10 +26,8 @@
     }
   </script>
 
-  <!-- Three.js, Chart.js এবং নতুন GSAP অ্যানিমেশন লাইব্রেরি -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -58,7 +56,7 @@
       background-size: 44px 44px;
       mask-image: linear-gradient(to bottom, black, transparent 88%);
     }
-    #globeWrap { min-height: 560px; }
+    #globeWrap { min-height: 560px; position: relative; }
     #globe { position:absolute; inset:0; width:100%; height:100%; outline: none; }
     .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
     @keyframes pulse {
@@ -84,7 +82,7 @@
 
       <div class="flex-1 w-full lg:max-w-2xl relative">
         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
-        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city..." />
+        <input id="cityInput" class="w-full bg-black/20 border border-slate-700/60 rounded-xl pl-11 pr-4 py-2.5 outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/10 text-sm" placeholder="Search city or location..." />
       </div>
 
       <div class="flex gap-2 w-full lg:w-auto">
@@ -150,6 +148,20 @@
         </div>
 
         <div id="globe"></div>
+
+        <!-- NEW: AR Floating Popup for the City with Iconic Background -->
+        <div id="globePopup" class="hidden absolute top-0 left-0 z-20 pointer-events-none opacity-0 transition-opacity duration-300 transform -translate-x-1/2 -translate-y-full">
+          <div class="glass w-[140px] h-[70px] rounded-xl border border-cyan/40 relative overflow-hidden text-center shadow-cyanGlow flex flex-col justify-center">
+            <!-- Dynamic Iconic City Background -->
+            <div id="gpBg" class="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-screen transition-all duration-500"></div>
+            <!-- Gradient Overlay for text readability -->
+            <div class="absolute inset-0 bg-gradient-to-t from-storm/90 to-transparent"></div>
+            <p id="gpCity" class="text-sm font-bold text-white relative z-10 px-2 truncate drop-shadow-md">City</p>
+            <p id="gpDetails" class="text-[10px] text-neon relative z-10 px-2 mt-1 drop-shadow-md">--</p>
+          </div>
+          <!-- Pointer Triangle -->
+          <div class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-cyan/40 mx-auto"></div>
+        </div>
 
         <div class="absolute bottom-5 left-5 right-5 flex justify-between items-end pointer-events-none">
           <div>
@@ -242,8 +254,27 @@
   let currentCity = null;
   let currentLat = null;
   let currentLon = null;
-  let shouldFly = false;
+  
+  // AR Popup Tracking Variables
+  let targetVector = null;
+  const globeWrap = document.getElementById('globeWrap');
+  const globePopup = document.getElementById('globePopup');
 
+  // আইকনিক শহরের ছবির ডেটাবেস
+  const cityLandmarks = {
+    "london": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=300&q=80",
+    "new york": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=300&q=80",
+    "paris": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=300&q=80",
+    "tokyo": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=300&q=80",
+    "dubai": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=300&q=80",
+    "sydney": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&w=300&q=80",
+    "delhi": "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=300&q=80",
+    "mumbai": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=300&q=80",
+    "berlin": "https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=300&q=80",
+    "default": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=300&q=80"
+  };
+
+  // --- Three.js Realistic Globe Setup ---
   const globeEl = document.getElementById(`globe`);
   const scene = new THREE.Scene();
   
@@ -256,9 +287,9 @@
   globeEl.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; 
+  controls.enableDamping = true;
   controls.enablePan = false;
-  controls.autoRotate = false;
+  controls.autoRotate = false; 
   controls.minDistance = 1.5; 
   controls.maxDistance = 4.0;
 
@@ -323,18 +354,6 @@
        radius * Math.cos(phi),
        radius * Math.sin(phi) * Math.sin(theta)
     );
-  }
-
-  let isFlying = false;
-  let flyingLocalPos = null;
-
-  function flyToLocation(lat, lon) {
-    let dist = camera.position.length();
-    if (dist > 3.0) dist = 2.8; 
-    
-    flyingLocalPos = latLonToVector3(lat, lon, dist);
-    isFlying = true;
-    controls.enabled = false;
   }
 
   function clearStorms() {
@@ -432,9 +451,9 @@
     camera.aspect = Math.max(r.width, 1) / Math.max(r.height, 1);
     
     if (r.width < 768) {
-      if(!isFlying) camera.position.z = 3.8; 
+      camera.position.z = 3.8; 
     } else {
-      if(!isFlying) camera.position.z = 2.8; 
+      camera.position.z = 2.8; 
     }
     
     camera.updateProjectionMatrix();
@@ -443,26 +462,39 @@
   window.addEventListener(`resize`, resize);
   resize();
 
+  const yAxis = new THREE.Vector3(0, 1, 0);
+
+  // --- Smooth Animation & AR Popup Tracking Loop ---
   function animate() {
     requestAnimationFrame(animate);
     
-    globeGroup.rotation.y += 0.0012;
+    // পৃথিবী মসৃণভাবে নিজস্ব অক্ষে ঘুরবে
+    globeGroup.rotateOnWorldAxis(yAxis, 0.0015);
 
-    if (isFlying && flyingLocalPos) {
-      const worldPos = flyingLocalPos.clone().applyMatrix4(globeGroup.matrixWorld);
-      camera.position.lerp(worldPos, 0.04);
-      camera.lookAt(0, 0, 0);
+    // ভাসমান পপ-আপ পৃথিবীর সাথে সাথে ট্র্যাকিং করবে
+    if (targetVector) {
+      const worldPos = targetVector.clone().applyMatrix4(globeGroup.matrixWorld);
+      const distToCam = worldPos.distanceTo(camera.position);
       
-      if (camera.position.distanceTo(worldPos) < 0.05) {
-        isFlying = false;
-        controls.enabled = true;
+      const tangentDist = Math.sqrt(Math.pow(camera.position.length(), 2) - Math.pow(earthRadius, 2));
+      
+      if (distToCam > tangentDist) {
+        globePopup.classList.add('opacity-0');
+      } else {
+        globePopup.classList.remove('opacity-0');
+        globePopup.classList.remove('hidden');
+        
+        const projected = worldPos.clone().project(camera);
+        const rect = globeWrap.getBoundingClientRect();
+        
+        const x = (projected.x * 0.5 + 0.5) * rect.width;
+        const y = (projected.y * -0.5 + 0.5) * rect.height;
+        
+        globePopup.style.transform = `translate(-50%, -100%) translate(${x}px,${y - 12}px)`;
       }
     }
 
-    if (!isFlying) {
-      controls.update();
-    }
-    
+    controls.update();
     renderer.render(scene, camera);
   }
   animate();
@@ -490,6 +522,7 @@
   renderer.domElement.addEventListener(`click`, handleInteraction);
   renderer.domElement.addEventListener(`touchend`, handleInteraction, {passive: true});
 
+  // --- Chart Setup ---
   const mainChart = new Chart(document.getElementById(`stormChart`).getContext(`2d`), {
     type: `line`,
     data: {
@@ -515,6 +548,7 @@
     }
   });
 
+  // --- API & Data Logic ---
   async function updateData() {
     try {
       let url = `/data`;
@@ -535,6 +569,8 @@
         document.getElementById(`location`).textContent = `Location Not Found`;
         document.getElementById(`systemStatus`).textContent = `● API Fetch Failed (Check Backend)`;
         document.getElementById(`systemStatus`).className = `mt-1 text-sm text-red-400`;
+        targetVector = null;
+        globePopup.classList.add('hidden');
         return;
       }
 
@@ -575,10 +611,26 @@
           mainChart.update();
       }
 
-      if (shouldFly && data.lat && data.lon) {
-         flyToLocation(data.lat, data.lon);
-         shouldFly = false;
+      // সার্চ করার পর নতুন শহরের 3D পজিশন সেট করা এবং পপ-আপে টেক্সট বসানো
+      if (data.lat && data.lon) {
+         targetVector = latLonToVector3(data.lat, data.lon, earthRadius + 0.05);
+         document.getElementById('gpCity').textContent = data.location;
+         
+         let rColor = data.risk === `CRITICAL` ? `text-red-400` : `text-neon`;
+         document.getElementById('gpDetails').innerHTML = `<span class="text-white">${data.temp}°C</span> • <span class="${rColor}">${data.status}</span>`;
+
+         // শহরের নাম অনুযায়ী আইকনিক ব্যাকগ্রাউন্ড সেট করা
+         let locName = data.location.toLowerCase();
+         let bgUrl = cityLandmarks["default"];
+         for (let key in cityLandmarks) {
+            if (locName.includes(key)) {
+               bgUrl = cityLandmarks[key];
+               break;
+            }
+         }
+         document.getElementById('gpBg').style.backgroundImage = `url('${bgUrl}')`;
       }
+
       renderGlobeData(data);
 
     } catch (e) {
@@ -592,7 +644,6 @@
     currentCity = document.getElementById(`cityInput`).value.trim();
     currentLat = null;
     currentLon = null;
-    shouldFly = true; 
     updateData();
   };
   
@@ -608,7 +659,6 @@
         currentLon = p.coords.longitude;
         currentCity = null;
         document.getElementById(`cityInput`).value = ``;
-        shouldFly = true; 
         updateData();
       },
       () => alert(`GPS permission denied.`)
@@ -678,7 +728,6 @@
     }
   };
 
-  shouldFly = true;
   setInterval(updateData, 5000);
   updateData();
 </script>
