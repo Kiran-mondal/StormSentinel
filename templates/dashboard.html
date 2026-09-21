@@ -256,16 +256,15 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.enablePan = false;
-  controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.6;
+  controls.autoRotate = false; // ক্যামেরা ঘোরা বন্ধ করা হলো
   controls.minDistance = 1.5; 
   controls.maxDistance = 4.0;
 
-  // Lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+  // বাস্তবসম্মত দিন-রাতের আলো (সূর্য এক জায়গায় স্থির থাকবে)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
   scene.add(ambientLight);
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  sunLight.position.set(5, 3, 5);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
+  sunLight.position.set(5, 2, 3);
   scene.add(sunLight);
 
   // Stars background
@@ -407,33 +406,54 @@
     document.getElementById(`stormCount`).textContent = count;
   }
 
+  // মোবাইল এবং ডেস্কটপ স্ক্রিনের জন্য রেসপনসিভ ক্যামেরা
   function resize() {
     const r = globeEl.getBoundingClientRect();
     camera.aspect = Math.max(r.width, 1) / Math.max(r.height, 1);
+    
+    if (r.width < 768) {
+      camera.position.z = 3.8; // মোবাইলের জন্য একটু দূরে
+    } else {
+      camera.position.z = 2.8; // ডেস্কটপের জন্য স্বাভাবিক
+    }
+    
     camera.updateProjectionMatrix();
     renderer.setSize(Math.max(r.width, 1), Math.max(r.height, 1), false);
   }
   window.addEventListener(`resize`, resize);
   resize();
 
-  // Animation Loop added back!
   function animate() {
     requestAnimationFrame(animate);
+    globeGroup.rotation.y += 0.0015; // পৃথিবী নিজের অক্ষে ঘুরবে
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
 
-  renderer.domElement.addEventListener(`click`, (event) => {
+  // মোবাইল এবং ডেস্কটপ উভয়ের জন্য ক্লিক/টাচ ইভেন্ট
+  function handleInteraction(event) {
     const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    let x, y;
+    if (event.type === 'touchend') {
+      x = event.changedTouches[0].clientX;
+      y = event.changedTouches[0].clientY;
+    } else {
+      x = event.clientX;
+      y = event.clientY;
+    }
+    mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+    
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(raycastTargets);
     if (hits.length) {
       openStorm(hits[0].object.userData);
     }
-  });
+  }
+
+  renderer.domElement.addEventListener(`click`, handleInteraction);
+  renderer.domElement.addEventListener(`touchend`, handleInteraction, {passive: true});
 
   // --- Chart Setup ---
   const mainChart = new Chart(document.getElementById(`stormChart`).getContext(`2d`), {
