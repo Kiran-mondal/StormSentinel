@@ -3,14 +3,22 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars, useTexture, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-// --- আইকনিক শহরের ছবির ডেটাবেস ---
-const cityLandmarks = {
+// --- আইকনিক শহর ও দেশের ছবির ডেটাবেস (Country/Region Fallbacks) ---
+const regionalLandmarks = {
   "london": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=300&q=80",
   "new york": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=300&q=80",
   "paris": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=300&q=80",
   "tokyo": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=300&q=80",
   "dubai": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=300&q=80",
   "mumbai": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=300&q=80",
+  "delhi": "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=300&q=80",
+  "india": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=300&q=80", 
+  "bangladesh": "https://images.unsplash.com/photo-1623594273574-e36214828114?auto=format&fit=crop&w=300&q=80",
+  "japan": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=300&q=80",
+  "usa": "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=300&q=80",
+  "uk": "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=300&q=80",
+  "australia": "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?auto=format&fit=crop&w=300&q=80",
+  "brazil": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=300&q=80",
   "default": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=300&q=80"
 };
 
@@ -39,7 +47,7 @@ const Atmosphere = () => {
 };
 
 // --- থ্রিডি পৃথিবী ও AR পপ-আপ ---
-const Earth = ({ weatherData }) => {
+const Earth = ({ weatherData, onGlobeClick }) => {
   const earthRef = useRef();
   const [colorMap, bumpMap] = useTexture([
     'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
@@ -60,13 +68,27 @@ const Earth = ({ weatherData }) => {
     ];
   };
 
-  // শহরের নাম অনুযায়ী ছবি খোঁজা
-  let bgUrl = cityLandmarks["default"];
+  const handleClick = (event) => {
+    event.stopPropagation();
+    const intersect = event.intersections[0];
+    if (!intersect) return;
+
+    const point = intersect.point.clone();
+    earthRef.current.worldToLocal(point);
+    point.normalize();
+
+    const lat = 90 - (Math.acos(point.y) * 180) / Math.PI;
+    const lon = (270 + (Math.atan2(point.x, point.z) * 180) / Math.PI) % 360 - 180;
+    
+    onGlobeClick(lat, lon);
+  };
+
+  let bgUrl = regionalLandmarks["default"];
   if (weatherData && weatherData.location) {
     const locName = weatherData.location.toLowerCase();
-    for (let key in cityLandmarks) {
+    for (let key in regionalLandmarks) {
       if (locName.includes(key)) {
-        bgUrl = cityLandmarks[key];
+        bgUrl = regionalLandmarks[key];
         break;
       }
     }
@@ -74,32 +96,27 @@ const Earth = ({ weatherData }) => {
 
   return (
     <group ref={earthRef}>
-      <mesh>
+      <mesh onClick={handleClick}>
         <sphereGeometry args={[1, 64, 64]} />
         <meshStandardMaterial map={colorMap} bumpMap={bumpMap} bumpScale={0.015} roughness={0.7} metalness={0.05} />
       </mesh>
       <Atmosphere />
       
-      {/* AR পপ-আপ (তীর চিহ্ন ও আইকনিক ব্যাকগ্রাউন্ডসহ) */}
       {weatherData && weatherData.lat && weatherData.lon && (
         <Html position={get3DPosition(weatherData.lat, weatherData.lon)} center>
           <div className="pointer-events-none transform -translate-y-12">
-            <div className="relative w-36 h-16 rounded-xl border border-cyan-400/50 shadow-[0_0_15px_rgba(76,215,246,0.4)] overflow-hidden flex flex-col justify-center text-center">
-              
-              {/* আইকনিক ব্যাকগ্রাউন্ড ছবি */}
+            <div className="relative w-40 h-16 rounded-xl border border-cyan-400/50 shadow-[0_0_15px_rgba(76,215,246,0.4)] overflow-hidden flex flex-col justify-center text-center">
               <div 
                 className="absolute inset-0 bg-cover bg-center opacity-50 mix-blend-screen transition-all duration-500"
                 style={{ backgroundImage: `url('${bgUrl}')` }}
               ></div>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0f131d]/90 to-transparent"></div>
               
-              {/* লেবেলের টেক্সট */}
               <div className="relative z-10">
                 <p className="text-white font-bold text-sm drop-shadow-md truncate px-1">{weatherData.location}</p>
                 <p className="text-cyan-400 text-[10px] font-semibold drop-shadow-md mt-0.5">{weatherData.temp}°C • {weatherData.status}</p>
               </div>
             </div>
-            {/* নিচের দিকে পয়েন্ট করা তীর চিহ্ন (Arrow) */}
             <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-cyan-400/60 mx-auto"></div>
           </div>
         </Html>
@@ -113,10 +130,17 @@ export default function App() {
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchWeather = async (city = 'Kolkata') => {
+  const fetchWeather = async (city = '', lat = null, lon = null) => {
     setLoading(true);
     try {
-      const res = await fetch(`/data?city=${city}`);
+      let url = '/data?';
+      if (lat !== null && lon !== null) {
+        url += `lat=${lat}&lon=${lon}`;
+      } else {
+        url += `city=${city || 'Kolkata'}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (!data.error) setWeatherData(data);
     } catch (err) {
@@ -126,15 +150,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchWeather();
-    const interval = setInterval(() => fetchWeather(searchCity || 'Kolkata'), 15000);
+    fetchWeather('Kolkata');
+    const interval = setInterval(() => {
+      if (weatherData && weatherData.lat) {
+        fetchWeather('', weatherData.lat, weatherData.lon);
+      } else {
+        fetchWeather(searchCity || 'Kolkata');
+      }
+    }, 15000);
     return () => clearInterval(interval);
-  }, [searchCity]);
+  }, [searchCity, weatherData?.lat, weatherData?.lon]);
 
   return (
     <div className="w-full h-screen bg-[#0f131d] relative font-sans overflow-hidden text-slate-200">
       
-      {/* UI ওভারলে - Header (মোবাইলেও ঠিকঠাক দেখাবে) */}
+      {/* UI ওভারলে - Header */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row gap-3 justify-between items-start md:items-center pointer-events-auto">
         <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl shadow-lg w-full md:w-auto">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-cyan-400/10 border border-cyan-400/30 rounded-xl flex items-center justify-center text-lg md:text-xl shadow-[0_0_15px_rgba(76,215,246,0.2)]">⚡</div>
@@ -162,22 +192,24 @@ export default function App() {
         </div>
       </div>
 
-      {/* UI ওভারলে - Data Panel (মোবাইলে নিচে থাকবে, পিসিতে বামে) */}
+      {/* UI ওভারলে - Data Panel */}
       <div className="absolute bottom-4 left-4 right-4 md:bottom-auto md:top-28 md:w-72 z-10 pointer-events-auto max-h-[40vh] md:max-h-none overflow-y-auto">
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-xl">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-white text-sm md:text-base">Local Metrics</h2>
-            <span className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-green-400"><span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>LIVE</span>
+            <span className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-green-400">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>LIVE
+            </span>
           </div>
 
           {weatherData ? (
             <div className="space-y-2">
               <div className="bg-white/5 border border-white/5 p-2.5 rounded-xl flex justify-between items-center">
-                <div>
+                <div className="overflow-hidden">
                   <p className="text-[9px] uppercase tracking-widest text-slate-400">Location</p>
                   <p className="text-white font-bold mt-0.5 text-base truncate">{weatherData.location}</p>
                 </div>
-                <p className="text-white font-semibold text-xl">{weatherData.temp}°C</p>
+                <p className="text-white font-semibold text-xl ml-2 shrink-0">{weatherData.temp}°C</p>
               </div>
               
               <div className="grid grid-cols-2 gap-2">
@@ -204,10 +236,16 @@ export default function App() {
         <ambientLight intensity={0.2} />
         <directionalLight position={[5, 3, 4]} intensity={2.0} />
         <Stars radius={100} depth={50} count={500} factor={4} saturation={0} fade speed={1} />
-        <Earth weatherData={weatherData} />
+        <Earth 
+          weatherData={weatherData} 
+          onGlobeClick={(lat, lon) => {
+            setSearchCity(''); 
+            fetchWeather('', lat, lon);
+          }} 
+        />
         <OrbitControls enablePan={false} enableDamping dampingFactor={0.05} minDistance={1.5} maxDistance={4} />
       </Canvas>
     </div>
   );
-                              }
-    
+              }
+          
