@@ -1,0 +1,4 @@
+## 2024-05-24 - OS Command Injection in Notifier
+**Vulnerability:** Found an OS command injection vulnerability in `api/notifier.py`. The application used `os.system(f'notify-send "⚡ Lightning Alert" "{message}"')` where the `message` content was not sanitized. If an attacker controls the alert message (e.g., via location input spoofing), they can inject arbitrary shell commands.
+**Learning:** `os.system` executes commands using the system shell (`/bin/sh`), which makes it susceptible to command injection if any user input is interpolated into the command string.
+**Prevention:** Never use `os.system` with untrusted input. Use `subprocess.run` with a list of arguments `["command", "arg1", "arg2"]` so the OS executes the command directly without invoking a shell to parse arguments. Also, `shutil.which` should be used to check for command existence instead of running `which` through the shell.
