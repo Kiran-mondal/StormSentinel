@@ -1,5 +1,7 @@
 import os
 import platform
+import subprocess
+import shutil
 
 def send_alert(message):
     system = platform.system()
@@ -15,8 +17,10 @@ def send_alert(message):
 
     elif system == "Linux":
         # Try notify-send (for GUI Linux), fallback to Termux
-        if os.system("which notify-send > /dev/null 2>&1") == 0:
-            os.system(f'notify-send "⚡ Lightning Alert" "{message}"')
+        if shutil.which("notify-send") is not None:
+            # SECURITY: Using subprocess with a list of arguments to prevent command injection
+            # instead of os.system which is vulnerable to injection via string interpolation
+            subprocess.run(["notify-send", "⚡ Lightning Alert", message], check=False)
         else:
             # Fallback: print message for Termux
             print("🔔 ALERT: " + message)
