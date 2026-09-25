@@ -42,6 +42,9 @@ const Atmosphere = () => {
 // --- থ্রিডি পৃথিবী ও AR পপ-আপ ---
 const Earth = ({ weatherData, targetCoords, onGlobeClick }) => {
   const earthRef = useRef();
+  const sphereRef = useRef(); // গ্লোবের বডি ট্র‍্যাক করার জন্য নতুন Ref
+  const [hidden, setHidden] = useState(false); // পপ-আপ হাইড করার স্টেট
+
   const [colorMap, bumpMap] = useTexture([
     'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
     'https://unpkg.com/three-globe/example/img/earth-topology.png'
@@ -86,15 +89,21 @@ const Earth = ({ weatherData, targetCoords, onGlobeClick }) => {
 
   return (
     <group ref={earthRef}>
-      <mesh onClick={handleClick}>
+      <mesh ref={sphereRef} onClick={handleClick}>
         <sphereGeometry args={[1, 64, 64]} />
         <meshStandardMaterial map={colorMap} bumpMap={bumpMap} bumpScale={0.015} roughness={0.7} metalness={0.05} />
       </mesh>
       <Atmosphere />
       
       {targetCoords && weatherData && (
-        <Html position={get3DPosition(targetCoords.lat, targetCoords.lon)} center>
-          <div className="pointer-events-none transform -translate-y-12">
+        <Html 
+          position={get3DPosition(targetCoords.lat, targetCoords.lon)} 
+          center 
+          occlude={[sphereRef]} // গ্লোবের পেছনে গেলে ট্র্যাক করবে
+          onOcclude={setHidden} // পেছনে গেলে hidden স্টেট true করে দেবে
+        >
+          {/* hidden স্টেট অনুযায়ী opacity পরিবর্তন হবে */}
+          <div className={`pointer-events-none transform -translate-y-12 transition-opacity duration-300 ${hidden ? 'opacity-0' : 'opacity-100'}`}>
             <div className="relative w-40 h-16 rounded-xl border border-cyan-400/50 shadow-[0_0_20px_rgba(76,215,246,0.5)] overflow-hidden flex flex-col justify-center text-center">
               <div 
                 className="absolute inset-0 bg-cover bg-center opacity-60 mix-blend-screen transition-all duration-500"
@@ -115,7 +124,7 @@ const Earth = ({ weatherData, targetCoords, onGlobeClick }) => {
     </group>
   );
 };
-
+                
 export default function App() {
   const [searchCity, setSearchCity] = useState('');
   const [weatherData, setWeatherData] = useState(null);
