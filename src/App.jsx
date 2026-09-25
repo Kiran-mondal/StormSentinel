@@ -92,7 +92,6 @@ const Earth = ({ weatherData, targetCoords, onGlobeClick }) => {
       </mesh>
       <Atmosphere />
       
-      {/* গ্যারান্টিড AR পপ-আপ (তীর চিহ্নসহ) */}
       {targetCoords && weatherData && (
         <Html position={get3DPosition(targetCoords.lat, targetCoords.lon)} center>
           <div className="pointer-events-none transform -translate-y-12">
@@ -108,9 +107,7 @@ const Earth = ({ weatherData, targetCoords, onGlobeClick }) => {
                 <p className="text-cyan-400 text-[10px] font-bold drop-shadow-lg mt-0.5">{weatherData.temp}°C • {weatherData.status}</p>
               </div>
             </div>
-            {/* পপ-আপ এর নিচের তীর চিহ্ন (Arrow) */}
             <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-cyan-400/70 mx-auto"></div>
-            {/* লোকেশন পিন পয়েন্ট */}
             <div className="w-2 h-2 bg-cyan-400 rounded-full mx-auto mt-1 shadow-[0_0_10px_#4cd7f6] animate-pulse"></div>
           </div>
         </Html>
@@ -125,11 +122,13 @@ export default function App() {
   const [targetCoords, setTargetCoords] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Edit Modal States
+  // Edit Modal & Saved Locations States
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ temp: '', status: '', rain: '' });
+  
+  const [savedLocations, setSavedLocations] = useState([]);
+  const [showBookmarks, setShowBookmarks] = useState(false);
 
-  // আসল শহরের নাম বের করার এপিআই
   const getRealLocationName = async (lat, lon) => {
     try {
       const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
@@ -144,8 +143,6 @@ export default function App() {
     setLoading(true);
     try {
       let finalCity = city;
-      
-      // যদি ক্লিক করা হয়, তবে আগে আসল নাম বের করে নেবে
       if (lat !== null && lon !== null) {
         setTargetCoords({ lat, lon });
         finalCity = await getRealLocationName(lat, lon);
@@ -157,7 +154,6 @@ export default function App() {
       const res = await fetch(url);
       const data = await res.json();
       
-      // ব্যাকএন্ড যদি নাম না দেয়, তবে আমরা আমাদের বের করা আসল নাম বসিয়ে দেব
       if (!data.error) {
         if(lat !== null && lon !== null) data.location = finalCity;
         setWeatherData(data);
@@ -172,6 +168,22 @@ export default function App() {
   const handleGlobeClick = (lat, lon) => {
     setSearchCity(''); 
     fetchWeather('', lat, lon);
+  };
+
+  // --- লোকেশন পিন (Save) করার লজিক ---
+  const toggleSaveLocation = (specificLoc = null) => {
+    const locToToggle = specificLoc || { name: weatherData.location, lat: targetCoords.lat, lon: targetCoords.lon };
+    if (!locToToggle.name) return;
+
+    const isSaved = savedLocations.some(s => s.name === locToToggle.name);
+    let newList;
+    if (isSaved) {
+      newList = savedLocations.filter(s => s.name !== locToToggle.name); // Remove if exists
+    } else {
+      newList = [...savedLocations, locToToggle]; // Add new
+    }
+    setSavedLocations(newList);
+    localStorage.setItem('stormSentinel_saved', JSON.stringify(newList));
   };
 
   const handleOverrideSubmit = async () => {
@@ -194,9 +206,27 @@ export default function App() {
     }
   };
 
+  // --- প্রথমবার লোড হওয়ার সময় Auto GPS ও Saved List আনা ---
   useEffect(() => {
-    fetchWeather('Kolkata');
+    const stored = JSON.parse(localStorage.getItem('stormSentinel_saved')) || [];
+    setSavedLocations(stored);
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          fetchWeather('', position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.warn("GPS Access Denied. Defaulting to Kolkata.");
+          fetchWeather('Kolkata');
+        }
+      );
+    } else {
+      fetchWeather('Kolkata');
+    }
   }, []);
+
+  const isCurrentlySaved = savedLocations.some(s => s.name === weatherData?.location);
 
   return (
     <div className="w-full h-screen bg-[#0f131d] relative font-sans overflow-hidden text-slate-200">
@@ -211,26 +241,67 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex gap-2 w-full md:w-auto justify-end">
           <input 
             type="text" 
             placeholder="Search city..." 
-            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-cyan-400/50 text-sm w-full md:w-64 backdrop-blur-md"
+            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-cyan-400/50 text-sm w-full md:w-64 backdrop-blur-md hidden md:block"
             value={searchCity}
             onChange={(e) => setSearchCity(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchWeather(searchCity)}
           />
+          {/* Pinned Bookmarks Button */}
           <button 
-            onClick={() => fetchWeather(searchCity)}
-            className="bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 px-4 py-2.5 rounded-xl hover:bg-cyan-400/20 transition text-sm font-medium shrink-0"
+            onClick={() => setShowBookmarks(!showBookmarks)}
+            className={`border px-4 py-2.5 rounded-xl transition text-sm font-medium shrink-0 flex items-center gap-2 ${showBookmarks ? 'bg-cyan-400/20 border-cyan-400/50 text-cyan-400' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
           >
-            {loading ? '...' : 'Search'}
+            📌 <span className="hidden md:inline">Saved</span> 
+            <span className="bg-cyan-400 text-black text-[10px] font-bold px-1.5 rounded-full">{savedLocations.length}</span>
           </button>
         </div>
       </div>
 
+      {/* Bookmarks/Saved Locations Sidebar */}
+      {showBookmarks && (
+        <div className="absolute top-20 right-4 z-20 w-64 max-h-[60vh] overflow-y-auto bg-black/60 backdrop-blur-xl border border-cyan-400/30 p-4 rounded-2xl shadow-2xl pointer-events-auto">
+          <h3 className="text-white font-bold mb-3 border-b border-white/10 pb-2 text-sm">📌 Pinned Locations</h3>
+          {savedLocations.length === 0 ? (
+            <p className="text-xs text-slate-400">No locations saved yet. Click the 📍 icon next to a location name to save it.</p>
+          ) : (
+            <div className="space-y-2">
+              {savedLocations.map((loc, idx) => (
+                <div 
+                  key={idx} 
+                  className="flex justify-between items-center bg-white/5 hover:bg-white/10 p-2.5 rounded-xl cursor-pointer border border-transparent hover:border-cyan-400/30 transition group" 
+                  onClick={() => { fetchWeather('', loc.lat, loc.lon); setShowBookmarks(false); }}
+                >
+                  <p className="text-sm font-semibold text-white truncate w-3/4">{loc.name}</p>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); toggleSaveLocation(loc); }} 
+                    className="text-slate-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100 text-xs"
+                    title="Remove"
+                  >✖</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Data Panel */}
       <div className="absolute bottom-4 left-4 right-4 md:bottom-auto md:top-28 md:w-72 z-10 pointer-events-auto">
+        {/* Mobile Search Bar (Only shows on mobile) */}
+        <div className="flex md:hidden mb-2 gap-2">
+          <input 
+            type="text" 
+            placeholder="Search city..." 
+            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-cyan-400/50 text-sm w-full backdrop-blur-md"
+            value={searchCity}
+            onChange={(e) => setSearchCity(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && fetchWeather(searchCity)}
+          />
+        </div>
+
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-xl">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-white text-sm md:text-base">Local Metrics</h2>
@@ -242,11 +313,21 @@ export default function App() {
           {weatherData ? (
             <div className="space-y-3">
               <div className="bg-white/5 border border-white/5 p-3 rounded-xl flex justify-between items-center">
-                <div className="overflow-hidden">
+                <div className="overflow-hidden flex-1">
                   <p className="text-[9px] uppercase tracking-widest text-slate-400">Location</p>
-                  <p className="text-white font-bold mt-0.5 text-base truncate pr-2">{weatherData.location}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-white font-bold text-base truncate">{weatherData.location}</p>
+                    {/* Pin/Unpin Button */}
+                    <button 
+                      onClick={() => toggleSaveLocation()} 
+                      className={`text-lg transition-transform hover:scale-110 ${isCurrentlySaved ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(76,215,246,0.8)]' : 'text-slate-500 hover:text-slate-300'}`}
+                      title="Save Location"
+                    >
+                      {isCurrentlySaved ? '📌' : '📍'}
+                    </button>
+                  </div>
                 </div>
-                <p className="text-cyan-400 font-bold text-2xl shrink-0">{weatherData.temp}°C</p>
+                <p className="text-cyan-400 font-bold text-2xl shrink-0 ml-2">{weatherData.temp}°C</p>
               </div>
               
               <div className="grid grid-cols-2 gap-2">
@@ -262,7 +343,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Correct Data Button */}
               <button 
                 onClick={() => setShowEdit(true)}
                 className="w-full mt-2 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 py-2.5 rounded-xl text-xs font-semibold hover:bg-yellow-400/20 transition flex items-center justify-center gap-2"
@@ -317,5 +397,5 @@ export default function App() {
       </Canvas>
     </div>
   );
-                 }
-              
+              }
+    
