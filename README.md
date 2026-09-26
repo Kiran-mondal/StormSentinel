@@ -1,138 +1,80 @@
-<div align= "center">
+<div align="center">
   <img src="https://github.com/Kiran-mondal/StormSentinel/blob/main/public/logo.svg" alt="StormSentinel Logo" width="250" height="250">
 </div>
 
 # ⚡ StormSentinel
 
-Your watchtower against lightning threats.
+**An Enterprise-Grade 3D Weather Intelligence & Monitoring System.**
 
-A cross-platform lightning hazard detection & alerting system that monitors weather threats in real-time. Built with Python and Flask, StormSentinel provides intelligent lightning detection, risk assessment, and multi-channel alerts to keep you safe during severe weather events.
+StormSentinel has evolved into a next-generation, cross-platform weather tracking dashboard. Built with a powerful hybrid architecture (React.js Frontend + Python/Flask Backend), it provides an interactive 3D globe, real-time telemetry, and smart hazard detection wrapped in a stunning glassmorphism UI. Fully optimized for both Desktop browsers and Telegram Web Apps (Mini Apps).
 
-## 🌟 Features
+## 🌟 Key Features
 
-- **Real-time Lightning Detection** - Simulates frequency-based lightning detection with customizable sensors
-- **Smart Risk Assessment** - Region-based risk severity detection with intelligent algorithms
-- **Desktop Notifications** - Instant alerts on Windows and Linux systems
-- **Geolocation Support** - IP-based location detection for personalized alerts
-- **Web GUI** - Modern Flask-based web interface for monitoring and configuration
-- **Activity Logging** - Comprehensive logging of lightning events with timestamps and locations
-- **Offline Support** - Works offline after initial location fetch
-- **Cross-Platform** - Supports Windows, Linux, and Termux environments
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.7 or higher
-- pip package manager
-
-### Installation
-
-```bash
-git clone https://github.com/Kiran-mondal/StormSentinel.git
-cd StormSentinel
-pip install -r requirements.txt
-```
-
-### Running the Application
-
-```bash
-python3 web_gui.py
-```
-
-The web interface will be accessible at `http://localhost:5000` (or the configured port).
-
-## 📋 Requirements
-
-All dependencies are listed in `requirements.txt`:
-
-```
-flask          # Web framework
-requests       # HTTP client for geolocation
-```
-
-Install them with:
-```bash
-pip install -r requirements.txt
-```
-
-## 🔧 Customization
-
-### Using Real Sensors
-Replace the `get_frequency()` function in the core module with actual sensor data:
-
-```python
-def get_frequency():
-    # Connect to your lightning detection hardware
-    # Return frequency value from sensor
-    pass
-```
-
-### Regional Risk Logic
-Modify `risk_zone.py` to implement your region-specific risk assessment:
-
-```python
-# Customize risk levels based on your geography
-# Adjust sensitivity thresholds and alert criteria
-```
-
-### Alert Channels
-Enable additional notification methods:
-- 📧 Email alerts
-- 💬 Telegram bot integration
-- 🗺️ Google Maps links in alerts
-
-## 📊 Project Structure
-
-```
-StormSentinel/
-├── web_gui.py           # Flask web interface
-├── risk_zone.py         # Risk assessment logic
-├── requirements.txt     # Python dependencies
-└── README.md           # This file
-```
-
-## 🎯 Roadmap
-
-### Coming Soon
-- 🌐 **Google Maps Integration** - Maps link with detected lightning location
-- 📤 **Multi-Channel Alerts** - Telegram and Email notifications
-- 📊 **Data Export** - JSON/CSV export of frequency logs
-- 📈 **Analytics Dashboard** - Historical data visualization
-- 🔔 **Smart Notifications** - Customizable alert thresholds
+- **Interactive 3D Globe:** Smooth 3D Earth rendering with custom GLSL atmospheric shaders using React Three Fiber.
+- **Smart AR Pop-ups:** Dynamic, occlusion-aware floating labels with iconic regional background images that adapt to the selected country/city.
+- **Real-Time Telemetry:** Live weather data fetching, including temperature, wind speed, and hazard risk assessments.
+- **Auto GPS & Reverse Geocoding:** Automatically detects user location and resolves precise city/region names using BigDataCloud API.
+- **Unlimited Pinned Locations:** Save and manage favorite cities seamlessly using local storage functionality.
+- **Manual Override System:** A secure 'Correct Data' panel for manual data adjustments and system overrides.
+- **Telegram Web App Ready:** Native integration with Telegram's Mini App ecosystem with built-in navigation handling.
+- **Serverless Architecture:** Optimized for Vercel deployment with dedicated Python API routes handling backend logic.
 
 ## 💻 Technical Stack
 
-- **Backend**: Python 3
-- **Frontend**: HTML5, Flask
-- **APIs**: Geolocation (IP-based)
-- **Notifications**: Desktop notifications (native OS integration)
+- **Frontend:** React.js, Vite, Tailwind CSS, Three.js, React Three Fiber (`@react-three/fiber`, `@react-three/drei`)
+- **Backend:** Python 3, Flask, Vercel Serverless Functions
+- **Deployment:** Vercel (`vercel.json` rewrite rules configured)
+- **APIs:** BigDataCloud (Reverse Geocoding), Custom Weather Simulators
 
-## 🤝 Contributing
+## 🚀 Quick Start (Local Development)
 
-Contributions are welcome! Feel free to:
-- Report bugs and issues
-- Suggest new features
-- Submit pull requests
-- Improve documentation
+### Prerequisites
+- Node.js (v16 or higher)
+- Python (3.8 or higher)
+- npm or yarn
 
-## 📝 Notes
+### Setup Instructions
 
-- The application works **offline** after fetching location data once
-- Lightning detection frequency can be tuned for different environments
-- Desktop notifications require appropriate system permissions
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/Kiran-mondal/StormSentinel.git](https://github.com/Kiran-mondal/StormSentinel.git)
+   cd StormSentinel
 
-## ⚠️ Disclaimer
+ * Install Frontend Dependencies:
+   npm install
 
-StormSentinel is a detection and alerting tool designed to complement, not replace, official weather warnings and professional lightning detection systems. Always follow local weather authorities' guidance during severe weather events.
+ * Install Backend Dependencies:
+   pip install -r requirements.txt
 
-## 📧 Contact & Support
+ * Run the Development Server:
+   npm run dev
 
-For issues, questions, or suggestions, please open an issue on [GitHub Issues](https://github.com/Kiran-mondal/StormSentinel/issues).
+   (Note: To fully test the Python backend locally alongside React, we recommend using the Vercel CLI via vercel dev)
 
-## 📄 License
+📊 Project Architecture
+``` bash
+StormSentinel/
+   ├── api/                   # Python Flask Backend (Vercel Serverless Functions)
+   │   ├── index.py           # Main API Router
+   │   ├── sensor_simulator.py # Weather Data Logic
+   │   └── ...                # Additional backend modules
+   ├── public/                # Static Assets (Logo, Web Manifest)
+   ├── src/                   # React Frontend
+   │   ├── App.jsx            # Main 3D Canvas and UI Dashboard
+   │   └── main.jsx           # React Entry Point
+   ├── vercel.json            # Deployment routing configuration
+   ├── package.json           # Node dependencies
+   └── requirements.txt       # Python dependencies
+```
+# 🤝 Contributing
+Contributions are always welcome! Feel free to:
+ * Report bugs and issues
+ * Suggest new features
+ * Submit pull requests
+ * Improve documentation
+For major changes, please open an issue first on GitHub Issues to discuss what you would like to change.
 
-This project is provided as-is. Please check the repository for license details.
+# ⚠️ Disclaimer
+StormSentinel is an advanced detection and visualization tool designed to complement, not replace, official meteorological warnings. Always follow local weather authorities' guidance during severe weather events.
 
----
-
-**Stay safe, stay alert.** ⛈️
+# Stay safe, stay alert. ⛈️
