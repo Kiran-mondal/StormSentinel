@@ -20,4 +20,3 @@ def log_event(frequency, location):
         f.write(line)
 
     return line
-    
