@@ -104,4 +104,3 @@ def get_real_storm_data(city=None, lat=None, lon=None):
             "risk": "UNKNOWN", 
             "chart_val": 0
     }
-    
